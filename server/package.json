@@ -1,0 +1,21 @@
+{
+  "name": "radio-server",
+  "version": "1.0.0",
+  "description": "Synchronized online radio server",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.6.1",
+    "cors": "^2.8.5",
+    "music-metadata": "^7.14.0"
+  }
+}
+
