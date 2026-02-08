@@ -22,10 +22,16 @@ const io = new Server(httpServer, {
     methods: ["GET", "POST"]
   }
 });
+const clientDistPath = path.join(__dirname, '../client/dist');
 
 app.use(cors());
 app.use(express.json());
 
+app.use(express.static(clientDistPath));
+
+app.get('*', (req, res) => {
+  res.sendFile(path.join(clientDistPath, 'index.html'));
+});
 // Static serve the music folder
 app.use('/music', express.static(join(__dirname, 'music')));
 
@@ -68,6 +74,7 @@ io.on('connection', (socket) => {
     console.log('Client disconnected:', socket.id);
   });
 });
+
 
 const PORT = process.env.PORT || 3001;
 httpServer.listen(PORT, () => {
