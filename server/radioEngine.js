@@ -19,20 +19,20 @@ export class RadioEngine {
     try {
       const files = await readdir(this.musicPath);
       this.playlist = files
-        .filter(file => file.toLowerCase().endsWith('.mp3'))
+        .filter(file => file.toLowerCase().endsWith('.ogg'))
         .map(file => file);
       
       if (this.playlist.length === 0) {
-        throw new Error('No MP3 files found in music directory');
+        throw new Error('No OGG files found in music directory');
       }
       
       // Extract metadata for all tracks
-      console.log('Extracting metadata from MP3 files...');
+      console.log('Extracting metadata from OGG files...');
       await this.extractMetadata();
       
       this.shuffle();
       this.initialized = true;
-      console.log(`Found ${this.playlist.length} MP3 files`);
+      console.log(`Found ${this.playlist.length} OGG files`);
     } catch (error) {
       console.error('Error reading music directory:', error);
       throw error;
@@ -45,7 +45,7 @@ export class RadioEngine {
         const filePath = join(this.musicPath, filename);
         const metadata = await parseFile(filePath);
         
-        const title = metadata.common.title || filename.replace('.mp3', '');
+        const title = metadata.common.title || filename.replace('.ogg', '');
         const artist = metadata.common.artist || 'Unknown Artist';
         
         this.trackMetadata.set(filename, { title, artist });
@@ -53,7 +53,7 @@ export class RadioEngine {
       } catch (error) {
         console.warn(`Failed to extract metadata for ${filename}:`, error.message);
         // Fallback to filename if metadata extraction fails
-        const title = filename.replace('.mp3', '');
+        const title = filename.replace('.ogg', '');
         this.trackMetadata.set(filename, { title, artist: 'Unknown Artist' });
         return { filename, title, artist: 'Unknown Artist' };
       }
@@ -65,7 +65,7 @@ export class RadioEngine {
 
   getTrackMetadata(filename) {
     return this.trackMetadata.get(filename) || {
-      title: filename.replace('.mp3', ''),
+      title: filename.replace('.ogg', ''),
       artist: 'Unknown Artist'
     };
   }
