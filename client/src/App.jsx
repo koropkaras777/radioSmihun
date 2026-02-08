@@ -34,12 +34,12 @@ function App() {
     socketRef.current = io(SERVER_URL);
     
     socketRef.current.on('connect', () => {
-      console.log('Connected to server');
+      //console.log('Connected to server');
       setIsConnected(true);
     });
 
     socketRef.current.on('disconnect', () => {
-      console.log('Disconnected from server');
+      //console.log('Disconnected from server');
       setIsConnected(false);
     });
 
@@ -70,7 +70,7 @@ function App() {
           audioRef.current.load();
           // Set initial seek position after loading
           audioRef.current.addEventListener('loadeddata', () => {
-            if (audioRef.current && serverIsPlaying && isJoined) {
+            if (audioRef.current && serverIsPlaying && isJoined && !isPaused) {
               // Use the stored initial seek or current server seek
               const targetSeek = initialServerSeekRef.current !== null ? initialServerSeekRef.current : serverSeek;
               audioRef.current.currentTime = targetSeek;
@@ -159,7 +159,7 @@ function App() {
           // 4. We're past the grace period after joining
           if (!shouldSkipSync && drift > 5 && serverIsPlaying && !isPaused) {
             isSyncingRef.current = true;
-            console.log(`Drift detected: ${drift.toFixed(2)}s, syncing...`);
+            //console.log(`Drift detected: ${drift.toFixed(2)}s, syncing...`);
             
             // Use requestAnimationFrame for smoother sync
             requestAnimationFrame(() => {
@@ -224,7 +224,7 @@ function App() {
 
   // Effect to handle starting playback when joining (only once)
   useEffect(() => {
-    if (!isJoined || !audioRef.current || !currentTrack || hasStartedPlaybackRef.current) return;
+    if (!isJoined || !audioRef.current || !currentTrack || hasStartedPlaybackRef.current || isPaused) return;
 
     const audioUrl = `${SERVER_URL}/music/${encodeURIComponent(currentTrack)}`;
     
@@ -246,7 +246,7 @@ function App() {
         }
         audioRef.current.play()
           .then(() => {
-            console.log('Joined radio - playback started');
+            //console.log('Joined radio - playback started');
           })
           .catch(err => {
             console.error('Failed to start audio:', err);
@@ -294,7 +294,7 @@ function App() {
         audioRef.current.currentTime = serverSeek;
         setSeek(serverSeek);
         lastSyncTimeRef.current = Date.now();
-        console.log(`Resuming after pause - syncing to server position (drift: ${drift.toFixed(2)}s)`);
+        //console.log(`Resuming after pause - syncing to server position (drift: ${drift.toFixed(2)}s)`);
       }
       
       // Clear pause tracking and mark resume time
