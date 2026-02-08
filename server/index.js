@@ -18,7 +18,7 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: "*",
+    origin: "https://radiosmihun.onrender.com",
     methods: ["GET", "POST"]
   }
 });
@@ -32,6 +32,7 @@ app.use(express.static(clientDistPath));
 app.get('*', (req, res) => {
   res.sendFile(path.join(clientDistPath, 'index.html'));
 });
+
 // Static serve the music folder
 app.use('/music', express.static(join(__dirname, 'music')));
 
