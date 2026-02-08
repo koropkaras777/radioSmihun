@@ -33,6 +33,7 @@ app.get('*', (req, res) => {
   res.sendFile(path.join(clientDistPath, 'index.html'));
 });
 
+express.static.mime.define({'audio/mpeg': ['mp3']});
 // Static serve the music folder
 app.use('/music', express.static(join(__dirname, 'music')));
 
