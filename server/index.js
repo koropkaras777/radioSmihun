@@ -18,24 +18,19 @@ const app = express();
 const httpServer = createServer(app);
 const io = new Server(httpServer, {
   cors: {
-    origin: "https://radiosmihun.onrender.com",
+    origin: "*",
     methods: ["GET", "POST"]
   }
 });
-const clientDistPath = path.join(__dirname, '../client/dist');
 
 app.use(cors());
 app.use(express.json());
 
-app.use(express.static(clientDistPath));
-
-app.get('*', (req, res) => {
-  res.sendFile(path.join(clientDistPath, 'index.html'));
-});
-
-express.static.mime.define({'audio/mpeg': ['mp3']});
 // Static serve the music folder
 app.use('/music', express.static(join(__dirname, 'music')));
+
+const clientDistPath = path.join(__dirname, '../client/dist');
+app.use(express.static(clientDistPath));
 
 // Initialize Radio Engine
 const radioEngine = new RadioEngine(join(__dirname, 'music'));
@@ -84,3 +79,7 @@ httpServer.listen(PORT, () => {
   console.log(`Music files served at http://localhost:${PORT}/music/`);
 });
 
+app.get('*', (req, res) => {
+  // Цей код спрацює, тільки якщо запит НЕ був до /music і НЕ до статичних файлів
+  res.sendFile(path.join(clientDistPath, 'index.html'));
+});
