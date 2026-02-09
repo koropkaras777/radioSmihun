@@ -15,7 +15,9 @@ A real-time synchronized online radio application built with Node.js (Express + 
 ```
 Radio/
 ├── server/           # Node.js backend
-│   ├── music/        # Place your .mp3 files here
+│   ├── music/        
+│   │   ├── day/      # Place your .ogg files here
+│   │   ├── night/    # Place your .ogg files here
 │   ├── index.js      # Express server with Socket.io
 │   ├── radioEngine.js # Playlist and playback engine
 │   └── package.json
@@ -45,7 +47,7 @@ npm install
 
 ### 3. Add Music Files
 
-Place your `.mp3` files in the `server/music/` directory.
+Place your `.ogg` files in the `server/music/` directory.
 
 ### 4. Start the Server
 
@@ -73,7 +75,7 @@ The client will run on `http://localhost:3000`
 
 - **RadioEngine**: Manages the shuffled playlist and tracks the current playback position
 - **Socket.io**: Broadcasts the current state (track, seek position, isPlaying) to all connected clients every 2 seconds
-- **Static Serving**: Music files are served at `http://localhost:3001/music/[filename].mp3`
+- **Static Serving**: Music files are served at `http://localhost:3001/music/[filename].ogg`
 
 ### Frontend
 

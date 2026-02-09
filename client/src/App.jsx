@@ -212,7 +212,7 @@ function App() {
     // Notify server that track ended
     if (socketRef.current) {
       socketRef.current.emit('trackEnd');
-      console.log('Track ended, notifying server');
+      // console.log('Track ended, notifying server');
     }
   };
 
