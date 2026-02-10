@@ -32,6 +32,22 @@ app.use('/music', express.static(join(__dirname, 'music')));
 const clientDistPath = path.join(__dirname, '../client/dist');
 app.use(express.static(clientDistPath));
 
+const oligarchs = [
+  { name: "Рінат Ахметов", img: "akhmetov.png" },
+  { name: "Ігор Коломойський", img: "kolomoyskyi.png" },
+  { name: "Петро Порошенко", img: "poroshenko.png" },
+  { name: "Дмитро Фірташ", img: "firtash.png" },
+  { name: "Віктор Пінчук", img: "pinchuk.png" },
+  { name: "Вадим Новинський", img: "novynskyi.png" },
+  { name: "Сергій Тарута", img: "taruta.png" },
+  { name: "Геннадій Боголюбов", img: "boholyubov.png" },
+  { name: "Сергій Льовочкін", img: "lyovochkin.png" },
+  { name: "Григорій Суркіс", img: "surkis.png" },
+  { name: "Ігор Суркіс", img: "isurkis.png" },
+  { name: "Костянтин Жеваго", img: "zhevago.png" }
+];
+let activeUsers = {};
+
 // Initialize Radio Engine
 const radioEngine = new RadioEngine(join(__dirname, 'music'));
 
@@ -51,8 +67,20 @@ radioEngine.initialize().then(() => {
 
 // Socket.io connection handling
 io.on('connection', (socket) => {
+  // const randomName = oligarchs[Math.floor(Math.random() * oligarchs.length)];
+  // activeUsers[socket.id] = { name: randomName, color: '#' + Math.floor(Math.random()*16777215).toString(16) };
+
+  const person = oligarchs[Math.floor(Math.random() * oligarchs.length)];
+  activeUsers[socket.id] = { 
+    name: person.name, 
+    img: person.img, // Передаємо назву файлу
+    color: '#' + Math.floor(Math.random()*16777215).toString(16) 
+  };
+
   console.log('Client connected:', socket.id);
-  
+
+  io.emit('usersUpdate', Object.values(activeUsers));
+
   // Send current state immediately on connection
   const state = radioEngine.getState();
   socket.emit('sync', state);
@@ -68,6 +96,8 @@ io.on('connection', (socket) => {
   });
   
   socket.on('disconnect', () => {
+    delete activeUsers[socket.id];
+    io.emit('usersUpdate', Object.values(activeUsers));
     console.log('Client disconnected:', socket.id);
   });
 });
@@ -78,6 +108,8 @@ httpServer.listen(PORT, () => {
   console.log(`Radio server running on port ${PORT}`);
   console.log(`Music files served at http://localhost:${PORT}/music/`);
 });
+
+app.use('/avatars', express.static(join(__dirname, 'public', 'avatars')));
 
 app.get('*', (req, res) => {
   // Цей код спрацює, тільки якщо запит НЕ був до /music і НЕ до статичних файлів

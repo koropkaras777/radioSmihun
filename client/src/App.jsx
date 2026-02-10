@@ -15,6 +15,7 @@ function App() {
   const [playlist, setPlaylist] = useState([]);
   const [duration, setDuration] = useState(0);
   const [radioName, setRadioName] = useState('is loading...');
+  const [listeners, setListeners] = useState([]);
   
   const audioRef = useRef(null);
   const socketRef = useRef(null);
@@ -29,23 +30,42 @@ function App() {
   const lastServerSeekRef = useRef(0);
   const resumeTimeRef = useRef(null);
 
+  // 1. Ефект для ініціалізації з'єднання (лише 1 раз при старті)
   useEffect(() => {
-    // Connect to Socket.io server
-    socketRef.current = io(SERVER_URL);
-    
-    socketRef.current.on('connect', () => {
-      //console.log('Connected to server');
-      setIsConnected(true);
+    // Створюємо сокет тільки якщо його ще немає
+    if (!socketRef.current) {
+      socketRef.current = io(SERVER_URL);
+    }
+
+    const socket = socketRef.current;
+
+    socket.on('connect', () => setIsConnected(true));
+    socket.on('disconnect', () => setIsConnected(false));
+
+    socket.on('usersUpdate', (users) => {
+      setListeners(users);
     });
 
-    socketRef.current.on('disconnect', () => {
-      //console.log('Disconnected from server');
-      setIsConnected(false);
-    });
+    // Очищення тільки при повному виході з додатка
+    return () => {
+      if (socket) {
+        socket.off('connect');
+        socket.off('disconnect');
+        socket.off('usersUpdate');
+        // socket.disconnect(); // Можна не відключати, якщо хочете тримати сесію
+      }
+    };
+  }, []);
 
-    socketRef.current.on('sync', (state) => {
+  // 2. Ефект для синхронізації аудіо (залежить від станів, але НЕ перепідключає сокет)
+  useEffect(() => {
+    if (!socketRef.current) return;
+
+    const handleSync = (state) => {
       if (!audioRef.current) return;
-
+      
+      // Тут залишається вся ваша існуюча логіка sync...
+      // (деструктуризація, оновлення track, title, seek і т.д.)
       const { track, title, artist, seek: serverSeek, isPlaying: serverIsPlaying, playlist: upcoming, mode } = state;
       
       if (mode) {
@@ -184,14 +204,183 @@ function App() {
           setSeek(serverSeek);
         }
       }
-    });
+    };
+
+    socketRef.current.on('sync', handleSync);
 
     return () => {
       if (socketRef.current) {
-        socketRef.current.disconnect();
+        socketRef.current.off('sync', handleSync);
       }
     };
-  }, [currentTrack, isPlaying, isJoined, isPaused]);
+  }, [isJoined, isPaused, currentTrack]); // Залежності потрібні тільки для обробника, не для з'єднання
+  
+  // useEffect(() => {
+  //   socketRef.current = io(SERVER_URL);
+    
+  //   socketRef.current.on('connect', () => {
+  //     //console.log('Connected to server');
+  //     setIsConnected(true);
+  //   });
+
+  //   socketRef.current.on('usersUpdate', (users) => {
+  //     setListeners(users);
+  //   });
+
+  //   socketRef.current.on('disconnect', () => {
+  //     //console.log('Disconnected from server');
+  //     setIsConnected(false);
+  //   });
+
+  //   socketRef.current.on('sync', (state) => {
+  //     if (!audioRef.current) return;
+
+  //     const { track, title, artist, seek: serverSeek, isPlaying: serverIsPlaying, playlist: upcoming, mode } = state;
+      
+  //     if (mode) {
+  //       setRadioName(mode === 'night' ? 'Radio SOSUN' : 'Radio SMIHUN');
+  //     }
+
+  //     // Store last server seek position for resume sync
+  //     lastServerSeekRef.current = serverSeek;
+      
+  //     // Update track metadata
+  //     if (title) setCurrentTitle(title);
+  //     if (artist) setCurrentArtist(artist);
+      
+  //     // Store initial server seek when first connecting (before joining)
+  //     if (!isJoined && track && serverSeek !== undefined) {
+  //       initialServerSeekRef.current = serverSeek;
+  //     }
+
+  //     // Update track if changed
+  //     if (track && track !== currentTrack) {
+  //       setCurrentTrack(track);
+  //       hasInitialSyncedRef.current = false; // Reset for new track
+  //       const audioUrl = `${SERVER_URL}/music/${encodeURIComponent(track)}`;
+  //       if (audioRef.current.src !== audioUrl) {
+  //         audioRef.current.src = audioUrl;
+  //         audioRef.current.load();
+  //         // Set initial seek position after loading
+  //         audioRef.current.addEventListener('loadeddata', () => {
+  //           if (audioRef.current && serverIsPlaying && isJoined && !isPaused) {
+  //             // Use the stored initial seek or current server seek
+  //             const targetSeek = initialServerSeekRef.current !== null ? initialServerSeekRef.current : serverSeek;
+  //             audioRef.current.currentTime = targetSeek;
+  //             hasInitialSyncedRef.current = true;
+  //             // Only play if not already playing
+  //             if (audioRef.current.paused) {
+  //               audioRef.current.play().catch(err => console.error('Play error:', err));
+  //             }
+  //           }
+  //         }, { once: true });
+  //       }
+  //     } else if (track && isJoined && !audioRef.current.src) {
+  //       // Track is set but audio hasn't been loaded yet (user just joined)
+  //       const audioUrl = `${SERVER_URL}/music/${encodeURIComponent(track)}`;
+  //       audioRef.current.src = audioUrl;
+  //       audioRef.current.load();
+  //     }
+
+  //     // Update playlist
+  //     setPlaylist(upcoming || []);
+
+  //     // Sync playback state (only if joined and not manually paused)
+  //     if (isJoined && !isPaused) {
+  //       if (serverIsPlaying !== isPlaying) {
+  //         setIsPlaying(serverIsPlaying);
+  //         if (serverIsPlaying) {
+  //           // Only play if currently paused to avoid interrupting playback
+  //           if (audioRef.current.paused) {
+  //             audioRef.current.play().catch(err => console.error('Play error:', err));
+  //           }
+  //         } else {
+  //           if (!audioRef.current.paused) {
+  //             audioRef.current.pause();
+  //           }
+  //         }
+  //       }
+
+  //       // Sync seek position - only sync if drift is significant and not currently syncing
+  //       if (audioRef.current && audioRef.current.readyState >= 2 && !isSyncingRef.current) {
+  //         const localSeek = audioRef.current.currentTime;
+  //         const drift = Math.abs(localSeek - serverSeek);
+  //         const now = Date.now();
+          
+  //         // Initial sync: immediately sync when first joining (before audio starts)
+  //         if (!hasInitialSyncedRef.current && isJoined) {
+  //           const targetSeek = initialServerSeekRef.current !== null ? initialServerSeekRef.current : serverSeek;
+  //           if (Math.abs(localSeek - targetSeek) > 0.5) {
+  //             isSyncingRef.current = true;
+  //             audioRef.current.currentTime = targetSeek;
+  //             setSeek(targetSeek);
+  //             hasInitialSyncedRef.current = true;
+  //             lastSyncTimeRef.current = now;
+  //             isSyncingRef.current = false;
+  //             return; // Skip the rest of sync logic for initial sync
+  //           } else {
+  //             hasInitialSyncedRef.current = true;
+  //           }
+  //         }
+          
+  //         // Don't sync for the first 2 seconds after initial sync (grace period)
+  //         const timeSinceJoin = now - joinTimeRef.current;
+  //         const timeSinceLastSync = now - lastSyncTimeRef.current;
+  //         const shouldSkipSync = timeSinceJoin < 2000 || timeSinceLastSync < 2000;
+          
+  //         // Check if we just resumed from pause (within last 2 seconds) - sync immediately if drift > 1s
+  //         const justResumed = resumeTimeRef.current !== null && (now - resumeTimeRef.current) < 2000;
+  //         if (justResumed && drift > 1 && !audioRef.current.paused && !isPaused) {
+  //           isSyncingRef.current = true;
+  //           audioRef.current.currentTime = serverSeek;
+  //           setSeek(serverSeek);
+  //           lastSyncTimeRef.current = now;
+  //           resumeTimeRef.current = null; // Clear resume tracking after sync
+  //           isSyncingRef.current = false;
+  //           return;
+  //         }
+          
+  //         // Clear resume tracking if enough time has passed
+  //         if (resumeTimeRef.current !== null && (now - resumeTimeRef.current) >= 2000) {
+  //           resumeTimeRef.current = null;
+  //         }
+          
+  //         // Only sync if:
+  //         // 1. Drift is greater than 5 seconds (very lenient threshold for smoothness)
+  //         // 2. We haven't synced in the last 2 seconds (prevent rapid syncs)
+  //         // 3. Audio is actually playing
+  //         // 4. We're past the grace period after joining
+  //         if (!shouldSkipSync && drift > 5 && serverIsPlaying && !isPaused) {
+  //           isSyncingRef.current = true;
+  //           //console.log(`Drift detected: ${drift.toFixed(2)}s, syncing...`);
+            
+  //           // Use requestAnimationFrame for smoother sync
+  //           requestAnimationFrame(() => {
+  //             if (audioRef.current && !audioRef.current.paused) {
+  //               // Only sync if playing - don't interrupt if paused
+  //               audioRef.current.currentTime = serverSeek;
+  //               setSeek(serverSeek);
+  //               lastSyncTimeRef.current = now;
+  //             }
+  //             isSyncingRef.current = false;
+  //           });
+  //         } else {
+  //           // No significant drift, use local time for smooth playback
+  //           setSeek(localSeek);
+  //         }
+  //       } else if (!audioRef.current.src || audioRef.current.readyState < 2) {
+  //         // Audio not ready yet, just show server time
+  //         setSeek(serverSeek);
+  //       }
+  //     }
+  //   });
+
+  //   return () => {
+  //     if (socketRef.current) {
+  //       socketRef.current.disconnect();
+  //     }
+  //   };
+  // }, [currentTrack, isPlaying, isJoined, isPaused]);
 
   // Handle audio metadata loaded
   const handleLoadedMetadata = () => {
@@ -330,22 +519,134 @@ function App() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+    // Визначаємо ліміт відображення
+  const displayLimit = 3;
+  const visibleListeners = listeners.slice(0, displayLimit);
+  const hiddenListeners = listeners.slice(displayLimit);
+  const hiddenCount = hiddenListeners.length;
+
   const isNight = radioName === 'Radio SOSUN';
 
   return (
     <div className={`min-h-screen transition-colors duration-1000 ${
       isNight ? 'bg-[#0f0505]' : 'bg-gray-900'
     } text-white`}>
+      <div className="flex justify-end items-center gap-2 mb-4 p-2 relative">
+        {/* Відображаємо перших трьох */}
+        {visibleListeners.map((user, i) => (
+          <div 
+            key={i} 
+            title={user.name}
+            className="w-10 h-10 rounded-full border-2 overflow-hidden flex items-center justify-center text-xs font-bold transition-transform hover:scale-110 shadow-sm"
+            style={{ 
+              backgroundColor: user.color, 
+              borderColor: isNight ? '#4a0404' : '#fff',
+              cursor: 'help'
+            }}
+          >
+            {user.img ? (
+              <img 
+                src={`${SERVER_URL}/avatars/${user.img}`} 
+                alt={user.name}
+                className="w-full h-full object-cover"
+                // Якщо картинка не завантажилася, видаляємо її з DOM, і спрацює логіка нижче
+                onError={(e) => {
+                  e.target.onerror = null; 
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'flex';
+                }}
+              />
+            ) : null}
+
+            {/* Літера-заглушка (показується, якщо фото немає або воно не завантажилось) */}
+            <span 
+              className="flex items-center justify-center w-full h-full"
+              style={{ display: user.img ? 'none' : 'flex' }}
+            >
+              {user.name.split(' ')[1]?.[0] || user.name[0]}
+            </span>
+          </div>
+        ))}
+
+        {/* Якщо є більше 3 користувачів, показуємо лічильник з випадаючим списком */}
+        {hiddenCount > 0 && (
+          <div className="group relative">
+            <div 
+              className={`w-10 h-10 rounded-full border-2 flex items-center justify-center text-xs font-bold cursor-pointer transition-all ${
+                isNight 
+                  ? 'bg-[#3d1414]/80 border-[#4a0404] text-[#ff0000]' 
+                  : 'bg-gray-700/80 border-white text-white'
+              }`}
+            >
+              +{hiddenCount}
+            </div>
+
+            {/* Випадаючий список при наведенні (Tooltip) */}
+            <div className={`absolute right-0 top-full mt-2 w-56 rounded-xl shadow-2xl p-3 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 backdrop-blur-md ${
+              isNight 
+                ? 'bg-[#1a0505]/70 border border-[#4a0404]/50' 
+                : 'bg-white/70 border border-gray-200/50'
+            }`}>
+              <p className={`text-[10px] uppercase tracking-wider font-black mb-3 pb-1 border-b ${
+                isNight ? 'text-red-900 border-red-900/30' : 'text-gray-800 border-gray-100'
+              }`}>
+                Other listeners
+              </p>
+              <ul className="max-h-60 overflow-y-auto space-y-3 custom-scrollbar">
+                {hiddenListeners.map((user, i) => (
+                  <li key={i} className="flex items-center gap-3 group/item">
+                    {/* Кружок з фото або літерою */}
+                    <div 
+                      className="w-8 h-8 rounded-full border flex items-center justify-center text-[10px] font-bold shrink-0 overflow-hidden relative"
+                      style={{ 
+                        backgroundColor: user.color, 
+                        borderColor: isNight ? '#4a0404' : '#fff' 
+                      }}
+                    >
+                      {user.img ? (
+                        <img 
+                          src={`${SERVER_URL}/avatars/${user.img}`} 
+                          alt={user.name}
+                          className="w-full h-full object-cover block"
+                          onError={(e) => {
+                            e.target.style.display = 'none';
+                            e.target.nextSibling.style.display = 'flex';
+                          }}
+                        />
+                      ) : null}
+
+                      {/* Заглушка, якщо фото немає або воно не завантажилось */}
+                      <span 
+                        className="flex items-center justify-center w-full h-full"
+                        style={{ display: user.img ? 'none' : 'flex' }}
+                      >
+                        {user.name.split(' ')[1]?.[0] || user.name[0]}
+                      </span>
+                    </div>
+
+                    <span className={`text-xs font-medium truncate ${
+                      isNight ? 'text-gray-200' : 'text-gray-700'
+                    }`}>
+                      {user.name}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </div>
+        )}
+      </div>
+
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-      <h1 
-        className={`text-5xl font-extrabold mb-8 text-center transition-all duration-1000 tracking-wider`}
-        style={{
-          color: isNight ? '#bc0000' : '#ffffff', // Світла кров вночі, білий вдень
-          WebkitTextStroke: isNight ? '1px #4a0404' : 'none', // Темне обведення
-          textShadow: isNight ? '0 0 15px rgba(188, 0, 0, 0.3)' : 'none', // М'яке світіння
-          fontFamily: "'Segoe UI', Roboto, sans-serif"
-        }}
-      >{radioName}</h1>
+        <h1 
+          className={`text-5xl font-extrabold mb-8 text-center transition-all duration-1000 tracking-wider`}
+          style={{
+            color: isNight ? '#bc0000' : '#ffffff', // Світла кров вночі, білий вдень
+            WebkitTextStroke: isNight ? '1px #4a0404' : 'none', // Темне обведення
+            textShadow: isNight ? '0 0 15px rgba(188, 0, 0, 0.3)' : 'none', // М'яке світіння
+            fontFamily: "'Segoe UI', Roboto, sans-serif"
+          }}
+        >{radioName}</h1>
         
         {/* Connection Status */}
         <div className="mb-6 text-center">
