@@ -322,28 +322,6 @@ function App() {
     }
   };
 
-  // Get radio name based on current time
-  // const getRadioName = () => {
-  //   const now = new Date();
-  //   const hours = now.getHours();
-  //   // From 00:00 to 06:00 (0-5 hours) = Radio SOSUN
-  //   // Other times = Radio SMIHUN
-  //   return (hours >= 0 && hours < 6) ? 'Radio SOSUN' : 'Radio SMIHUN';
-  // };
-
-  // Update radio name based on time
-  // useEffect(() => {
-  //   // Set initial name
-  //   setRadioName(getRadioName());
-
-  //   // Update every minute to catch the 06:00 transition
-  //   const interval = setInterval(() => {
-  //     setRadioName(getRadioName());
-  //   }, 60000); // Check every minute
-
-  //   return () => clearInterval(interval);
-  // }, []);
-
   // Format time helper
   const formatTime = (seconds) => {
     if (!isFinite(seconds) || isNaN(seconds)) return '0:00';
@@ -352,10 +330,22 @@ function App() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
+  const isNight = radioName === 'Radio SOSUN';
+
   return (
-    <div className="min-h-screen bg-gray-900 text-white">
+    <div className={`min-h-screen transition-colors duration-1000 ${
+      isNight ? 'bg-[#0f0505]' : 'bg-gray-900'
+    } text-white`}>
       <div className="container mx-auto px-4 py-8 max-w-4xl">
-        <h1 className="text-4xl font-bold mb-8 text-center">{radioName}</h1>
+      <h1 
+        className={`text-5xl font-extrabold mb-8 text-center transition-all duration-1000 tracking-wider`}
+        style={{
+          color: isNight ? '#bc0000' : '#ffffff', // Світла кров вночі, білий вдень
+          WebkitTextStroke: isNight ? '1px #4a0404' : 'none', // Темне обведення
+          textShadow: isNight ? '0 0 15px rgba(188, 0, 0, 0.3)' : 'none', // М'яке світіння
+          fontFamily: "'Segoe UI', Roboto, sans-serif"
+        }}
+      >{radioName}</h1>
         
         {/* Connection Status */}
         <div className="mb-6 text-center">
@@ -380,7 +370,11 @@ function App() {
           <div className="text-center mb-8">
             <button
               onClick={handleJoinRadio}
-              className="bg-blue-600 hover:bg-blue-700 px-8 py-4 rounded-lg text-xl font-semibold transition-colors"
+              className={`px-8 py-4 rounded-lg text-xl font-semibold transition-all ${
+                isNight 
+                  ? 'bg-[#8a0303] hover:bg-[#a00404] shadow-[0_0_15px_rgba(138,3,3,0.4)]' 
+                  : 'bg-blue-600 hover:bg-blue-700'
+              }`}
             >
               Join Radio
             </button>
@@ -393,7 +387,9 @@ function App() {
             <h2 className="text-2xl font-semibold mb-4">Now Playing</h2>
             <div className="mb-4">
               {currentTitle && (
-                <p className="text-2xl font-bold text-blue-400 mb-1">{currentTitle}</p>
+                <p className={`text-2xl font-bold mb-1 transition-colors ${
+                  isNight ? 'text-[#bc0000]' : 'text-blue-400'
+                }`}>{currentTitle}</p>
               )}
               {currentArtist && (
                 <p className="text-lg text-gray-300">{currentArtist}</p>
@@ -405,9 +401,11 @@ function App() {
             
             {/* Progress Bar */}
             <div className="mb-2">
-              <div className="w-full bg-gray-700 rounded-full h-2">
+              <div className={`w-full rounded-full h-2 ${isNight ? 'bg-[#2d1212]' : 'bg-gray-700'}`}>
                 <div
-                  className="bg-blue-600 h-2 rounded-full transition-all"
+                  className={`h-2 rounded-full transition-all duration-300 ${
+                    isNight ? 'bg-[#bc0000] shadow-[0_0_8px_rgba(188,0,0,0.5)]' : 'bg-blue-600'
+                  }`}
                   style={{ width: `${duration > 0 ? (seek / duration) * 100 : 0}%` }}
                 />
               </div>

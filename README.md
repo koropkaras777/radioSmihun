@@ -4,11 +4,12 @@ A real-time synchronized online radio application built with Node.js (Express + 
 
 ## Features
 
-- 🎵 Automatic playlist scanning from MP3 files
+- 🎵 Automatic playlist scanning from OGG files
 - 🔀 Shuffled playlist with auto-advance
 - 🔄 Real-time synchronization across all clients
 - 📡 WebSocket-based state broadcasting
 - 🎨 Modern dark-mode UI with Tailwind CSS
+- 🌙 Day/night radio mode
 
 ## Project Structure
 
