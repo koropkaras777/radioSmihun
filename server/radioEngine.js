@@ -17,7 +17,11 @@ export class RadioEngine {
   }
 
   getDesiredMode() {
-    const hour = new Date().getHours();
+    const hour = new Intl.DateTimeFormat('en-GB', {
+      timeZone: 'Europe/Kyiv',
+      hour: 'numeric',
+      hour12: false
+    }).format(new Date());
     // 00:00 - 06:00 — Night (SOSUN), решта — Day (SMIHUN)
     return (hour >= 0 && hour < 6) ? 'night' : 'day';
   }
@@ -161,7 +165,8 @@ export class RadioEngine {
       isPlaying: this.isPlaying,
       playlist: upcoming,
       currentIndex: this.currentIndex,
-      totalTracks: this.playlist.length
+      totalTracks: this.playlist.length,
+      mode: this.currentMode
     };
   }
   

@@ -14,7 +14,7 @@ function App() {
   const [isPaused, setIsPaused] = useState(false); // Local pause state
   const [playlist, setPlaylist] = useState([]);
   const [duration, setDuration] = useState(0);
-  const [radioName, setRadioName] = useState('Radio SOSUN');
+  const [radioName, setRadioName] = useState('is loading...');
   
   const audioRef = useRef(null);
   const socketRef = useRef(null);
@@ -46,8 +46,12 @@ function App() {
     socketRef.current.on('sync', (state) => {
       if (!audioRef.current) return;
 
-      const { track, title, artist, seek: serverSeek, isPlaying: serverIsPlaying, playlist: upcoming } = state;
+      const { track, title, artist, seek: serverSeek, isPlaying: serverIsPlaying, playlist: upcoming, mode } = state;
       
+      if (mode) {
+        setRadioName(mode === 'night' ? 'Radio SOSUN' : 'Radio SMIHUN');
+      }
+
       // Store last server seek position for resume sync
       lastServerSeekRef.current = serverSeek;
       
@@ -319,26 +323,26 @@ function App() {
   };
 
   // Get radio name based on current time
-  const getRadioName = () => {
-    const now = new Date();
-    const hours = now.getHours();
-    // From 00:00 to 06:00 (0-5 hours) = Radio SOSUN
-    // Other times = Radio SMIHUN
-    return (hours >= 0 && hours < 6) ? 'Radio SOSUN' : 'Radio SMIHUN';
-  };
+  // const getRadioName = () => {
+  //   const now = new Date();
+  //   const hours = now.getHours();
+  //   // From 00:00 to 06:00 (0-5 hours) = Radio SOSUN
+  //   // Other times = Radio SMIHUN
+  //   return (hours >= 0 && hours < 6) ? 'Radio SOSUN' : 'Radio SMIHUN';
+  // };
 
   // Update radio name based on time
-  useEffect(() => {
-    // Set initial name
-    setRadioName(getRadioName());
+  // useEffect(() => {
+  //   // Set initial name
+  //   setRadioName(getRadioName());
 
-    // Update every minute to catch the 06:00 transition
-    const interval = setInterval(() => {
-      setRadioName(getRadioName());
-    }, 60000); // Check every minute
+  //   // Update every minute to catch the 06:00 transition
+  //   const interval = setInterval(() => {
+  //     setRadioName(getRadioName());
+  //   }, 60000); // Check every minute
 
-    return () => clearInterval(interval);
-  }, []);
+  //   return () => clearInterval(interval);
+  // }, []);
 
   // Format time helper
   const formatTime = (seconds) => {
