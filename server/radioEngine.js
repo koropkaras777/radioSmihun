@@ -23,7 +23,7 @@ export class RadioEngine {
       hour12: false
     }).format(new Date());
     // 00:00 - 06:00 — Night (SOSUN), решта — Day (SMIHUN)
-    return (hour >= 0 && hour < 6) ? 'night' : 'night';
+    return (hour >= 0 && hour < 6) ? 'night' : 'day';
   }
 
   async initialize() {
