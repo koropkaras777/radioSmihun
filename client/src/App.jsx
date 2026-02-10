@@ -535,37 +535,50 @@ function App() {
         {/* Відображаємо перших трьох */}
         {visibleListeners.map((user, i) => (
           <div 
-            key={i} 
-            title={user.name}
-            className="w-10 h-10 rounded-full border-2 overflow-hidden flex items-center justify-center text-xs font-bold transition-transform hover:scale-110 shadow-sm"
+          key={i} 
+          className="group relative flex items-center justify-center shrink-0"
+          tabIndex="0" // Важливо для роботи фокусу на мобільних
+        >
+          <div 
+            className="w-10 h-10 rounded-full border-2 overflow-hidden flex items-center justify-center transition-transform group-hover:scale-110 group-active:scale-95 shadow-sm"
             style={{ 
               backgroundColor: user.color, 
               borderColor: isNight ? '#4a0404' : '#fff',
-              cursor: 'help'
+              cursor: 'pointer'
             }}
           >
             {user.img ? (
               <img 
                 src={`${SERVER_URL}/avatars/${user.img}`} 
                 alt={user.name}
-                className="w-full h-full object-cover"
-                // Якщо картинка не завантажилася, видаляємо її з DOM, і спрацює логіка нижче
+                className="w-full h-full object-cover block"
                 onError={(e) => {
-                  e.target.onerror = null; 
                   e.target.style.display = 'none';
                   e.target.nextSibling.style.display = 'flex';
                 }}
               />
             ) : null}
-
-            {/* Літера-заглушка (показується, якщо фото немає або воно не завантажилось) */}
-            <span 
-              className="flex items-center justify-center w-full h-full"
-              style={{ display: user.img ? 'none' : 'flex' }}
-            >
+            <span className="flex items-center justify-center w-full h-full text-[10px] font-bold"
+                  style={{ display: user.img ? 'none' : 'flex' }}>
               {user.name.split(' ')[1]?.[0] || user.name[0]}
             </span>
           </div>
+        
+          {/* Універсальна підказка: hover для ПК, focus/active для мобільних */}
+          <div className={`absolute -bottom-10 right-0 px-2 py-1 rounded-md text-[10px] font-bold whitespace-nowrap z-50 pointer-events-none 
+            opacity-0 translate-y-2 
+            group-hover:opacity-100 group-hover:translate-y-0 
+            group-focus:opacity-100 group-focus:translate-y-0 
+            transition-all duration-200 shadow-lg ${
+            isNight ? 'bg-[#4a0404] text-red-200 border border-red-900' : 'bg-gray-800 text-white'
+          }`}>
+            {user.name}
+            
+            <div className={`absolute -top-1 right-4 w-2 h-2 rotate-45 ${
+              isNight ? 'bg-[#4a0404]' : 'bg-gray-800'
+            }`}></div>
+          </div>
+        </div>
         ))}
 
         {/* Якщо є більше 3 користувачів, показуємо лічильник з випадаючим списком */}
