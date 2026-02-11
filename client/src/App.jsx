@@ -531,123 +531,131 @@ function App() {
     <div className={`min-h-screen transition-colors duration-1000 ${
       isNight ? 'bg-[#0f0505]' : 'bg-gray-900'
     } text-white`}>
-      <div className="flex justify-end items-center gap-2 mb-4 p-2 relative">
-        {/* Відображаємо перших трьох */}
-        {visibleListeners.map((user, i) => (
-          <div 
-          key={i} 
-          className="group relative flex items-center justify-center shrink-0"
-          tabIndex="0" // Важливо для роботи фокусу на мобільних
-        >
-          <div 
-            className="w-10 h-10 rounded-full border-2 overflow-hidden flex items-center justify-center transition-transform group-hover:scale-110 group-active:scale-95 shadow-sm"
-            style={{ 
-              backgroundColor: user.color, 
-              borderColor: isNight ? '#4a0404' : '#fff',
-              cursor: 'pointer'
-            }}
-          >
-            {user.img ? (
-              <img 
-                src={`${SERVER_URL}/avatars/${user.img}`} 
-                alt={user.name}
-                className="w-full h-full object-cover block"
-                onError={(e) => {
-                  e.target.style.display = 'none';
-                  e.target.nextSibling.style.display = 'flex';
-                }}
-              />
-            ) : null}
-            <span className="flex items-center justify-center w-full h-full text-[10px] font-bold"
-                  style={{ display: user.img ? 'none' : 'flex' }}>
-              {user.name.split(' ')[1]?.[0] || user.name[0]}
-            </span>
-          </div>
-        
-          {/* Універсальна підказка: hover для ПК, focus/active для мобільних */}
-          <div className={`absolute -bottom-10 right-0 px-2 py-1 rounded-md text-[10px] font-bold whitespace-nowrap z-50 pointer-events-none 
-            opacity-0 translate-y-2 
-            group-hover:opacity-100 group-hover:translate-y-0 
-            group-focus:opacity-100 group-focus:translate-y-0 
-            transition-all duration-200 shadow-lg ${
-            isNight ? 'bg-[#4a0404] text-red-200 border border-red-900' : 'bg-gray-800 text-white'
-          }`}>
-            {user.name}
-            
-            <div className={`absolute -top-1 right-4 w-2 h-2 rotate-45 ${
-              isNight ? 'bg-[#4a0404]' : 'bg-gray-800'
-            }`}></div>
-          </div>
-        </div>
-        ))}
+      <div className="flex flex-col items-end mb-4 p-2 relative">
+        <span className={`text-[9px] uppercase tracking-[0.2em] font-black  px-1 ${
+          isNight ? 'text-red-900/60' : 'text-gray-500'
+        }`}>
+          Anonymous listeners
+        </span>
 
-        {/* Якщо є більше 3 користувачів, показуємо лічильник з випадаючим списком */}
-        {hiddenCount > 0 && (
-          <div className="group relative">
+        <div className="flex justify-end items-center gap-2 mb-4 p-2 relative">
+          {/* Відображаємо перших трьох */}
+          {visibleListeners.map((user, i) => (
             <div 
-              className={`w-10 h-10 rounded-full border-2 flex items-center justify-center text-xs font-bold cursor-pointer transition-all ${
-                isNight 
-                  ? 'bg-[#3d1414]/80 border-[#4a0404] text-[#ff0000]' 
-                  : 'bg-gray-700/80 border-white text-white'
-              }`}
+            key={i} 
+            className="group relative flex items-center justify-center shrink-0"
+            tabIndex="0" // Важливо для роботи фокусу на мобільних
+          >
+            <div 
+              className="w-10 h-10 rounded-full border-2 overflow-hidden flex items-center justify-center transition-transform group-hover:scale-110 group-active:scale-95 shadow-sm"
+              style={{ 
+                backgroundColor: user.color, 
+                borderColor: isNight ? '#4a0404' : '#fff',
+                cursor: 'pointer'
+              }}
             >
-              +{hiddenCount}
+              {user.img ? (
+                <img 
+                  src={`${SERVER_URL}/avatars/${user.img}`} 
+                  alt={user.name}
+                  className="w-full h-full object-cover block"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <span className="flex items-center justify-center w-full h-full text-[10px] font-bold"
+                    style={{ display: user.img ? 'none' : 'flex' }}>
+                {user.name.split(' ')[1]?.[0] || user.name[0]}
+              </span>
             </div>
-
-            {/* Випадаючий список при наведенні (Tooltip) */}
-            <div className={`absolute right-0 top-full mt-2 w-56 rounded-xl shadow-2xl p-3 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 backdrop-blur-md ${
-              isNight 
-                ? 'bg-[#1a0505]/70 border border-[#4a0404]/50' 
-                : 'bg-white/70 border border-gray-200/50'
+          
+            {/* Універсальна підказка: hover для ПК, focus/active для мобільних */}
+            <div className={`absolute -bottom-10 right-0 px-2 py-1 rounded-md text-[10px] font-bold whitespace-nowrap z-50 pointer-events-none 
+              opacity-0 translate-y-2 
+              group-hover:opacity-100 group-hover:translate-y-0 
+              group-focus:opacity-100 group-focus:translate-y-0 
+              transition-all duration-200 shadow-lg ${
+              isNight ? 'bg-[#4a0404] text-red-200 border border-red-900' : 'bg-gray-800 text-white'
             }`}>
-              <p className={`text-[10px] uppercase tracking-wider font-black mb-3 pb-1 border-b ${
-                isNight ? 'text-red-900 border-red-900/30' : 'text-gray-800 border-gray-100'
-              }`}>
-                Other listeners
-              </p>
-              <ul className="max-h-60 overflow-y-auto space-y-3 custom-scrollbar">
-                {hiddenListeners.map((user, i) => (
-                  <li key={i} className="flex items-center gap-3 group/item">
-                    {/* Кружок з фото або літерою */}
-                    <div 
-                      className="w-8 h-8 rounded-full border flex items-center justify-center text-[10px] font-bold shrink-0 overflow-hidden relative"
-                      style={{ 
-                        backgroundColor: user.color, 
-                        borderColor: isNight ? '#4a0404' : '#fff' 
-                      }}
-                    >
-                      {user.img ? (
-                        <img 
-                          src={`${SERVER_URL}/avatars/${user.img}`} 
-                          alt={user.name}
-                          className="w-full h-full object-cover block"
-                          onError={(e) => {
-                            e.target.style.display = 'none';
-                            e.target.nextSibling.style.display = 'flex';
-                          }}
-                        />
-                      ) : null}
-
-                      {/* Заглушка, якщо фото немає або воно не завантажилось */}
-                      <span 
-                        className="flex items-center justify-center w-full h-full"
-                        style={{ display: user.img ? 'none' : 'flex' }}
-                      >
-                        {user.name.split(' ')[1]?.[0] || user.name[0]}
-                      </span>
-                    </div>
-
-                    <span className={`text-xs font-medium truncate ${
-                      isNight ? 'text-gray-200' : 'text-gray-700'
-                    }`}>
-                      {user.name}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+              {user.name}
+              
+              <div className={`absolute -top-1 right-4 w-2 h-2 rotate-45 ${
+                isNight ? 'bg-[#4a0404]' : 'bg-gray-800'
+              }`}></div>
             </div>
           </div>
-        )}
+          ))}
+
+          {/* Якщо є більше 3 користувачів, показуємо лічильник з випадаючим списком */}
+          {hiddenCount > 0 && (
+            <div className="group relative">
+              <div 
+                className={`w-10 h-10 rounded-full border-2 flex items-center justify-center text-xs font-bold cursor-pointer transition-all ${
+                  isNight 
+                    ? 'bg-[#3d1414]/80 border-[#4a0404] text-[#ff0000]' 
+                    : 'bg-gray-700/80 border-white text-white'
+                }`}
+              >
+                +{hiddenCount}
+              </div>
+
+              {/* Випадаючий список при наведенні (Tooltip) */}
+              <div className={`absolute right-0 top-full mt-2 w-56 rounded-xl shadow-2xl p-3 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 backdrop-blur-md ${
+                isNight 
+                  ? 'bg-[#1a0505]/70 border border-[#4a0404]/50' 
+                  : 'bg-white/70 border border-gray-200/50'
+              }`}>
+                <p className={`text-[10px] uppercase tracking-wider font-black mb-3 pb-1 border-b ${
+                  isNight ? 'text-red-900 border-red-900/30' : 'text-gray-800 border-gray-100'
+                }`}>
+                  Other listeners
+                </p>
+                <ul className="max-h-60 overflow-y-auto space-y-3 custom-scrollbar">
+                  {hiddenListeners.map((user, i) => (
+                    <li key={i} className="flex items-center gap-3 group/item">
+                      {/* Кружок з фото або літерою */}
+                      <div 
+                        className="w-8 h-8 rounded-full border flex items-center justify-center text-[10px] font-bold shrink-0 overflow-hidden relative"
+                        style={{ 
+                          backgroundColor: user.color, 
+                          borderColor: isNight ? '#4a0404' : '#fff' 
+                        }}
+                      >
+                        {user.img ? (
+                          <img 
+                            src={`${SERVER_URL}/avatars/${user.img}`} 
+                            alt={user.name}
+                            className="w-full h-full object-cover block"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+
+                        {/* Заглушка, якщо фото немає або воно не завантажилось */}
+                        <span 
+                          className="flex items-center justify-center w-full h-full"
+                          style={{ display: user.img ? 'none' : 'flex' }}
+                        >
+                          {user.name.split(' ')[1]?.[0] || user.name[0]}
+                        </span>
+                      </div>
+
+                      <span className={`text-xs font-medium truncate ${
+                        isNight ? 'text-gray-200' : 'text-gray-700'
+                      }`}>
+                        {user.name}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="container mx-auto px-4 py-8 max-w-4xl">
