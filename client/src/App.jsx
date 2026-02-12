@@ -18,6 +18,9 @@ function App() {
   const [listeners, setListeners] = useState([]);
   const [showOnlyOne, setShowOnlyOne] = useState(false);
   const [isBlurred, setIsBlurred] = useState(true);
+  const [volume, setVolume] = useState(0.5);
+  const [isMuted, setIsMuted] = useState(false);
+  const [showVolumeBar, setShowVolumeBar] = useState(false);
   
   const audioRef = useRef(null);
   const socketRef = useRef(null);
@@ -54,6 +57,12 @@ function App() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    if (audioRef.current) {
+      audioRef.current.volume = isMuted ? 0 : volume;
+    }
+  }, [volume, isMuted]);
 
   useEffect(() => {
     if (!socketRef.current) return;
@@ -569,11 +578,58 @@ function App() {
                   </>
                 )}
               </button>
-              <span className={`inline-block px-3 py-1 rounded text-sm ${
-                isPaused ? 'bg-yellow-600' : (isPlaying ? 'bg-green-600' : 'bg-gray-600')
-              }`}>
-                {isPaused ? '⏸ Paused' : (isPlaying ? '▶ Playing' : '⏸ Stopped')}
+            </div>
+          </div>
+        )}
+
+        {isJoined && (
+          <div 
+            className="fixed bottom-6 left-6 z-50 flex flex-col-reverse items-center group"
+            onMouseEnter={() => setShowVolumeBar(true)}
+            onMouseLeave={() => setShowVolumeBar(false)}
+          >
+            <button
+              onClick={() => setIsMuted(!isMuted)}
+              className={`relative z-20 w-14 h-14 flex items-center justify-center rounded-full shadow-2xl transition-all duration-300 active:scale-95 ${
+                radioName.includes('SMIHUN') 
+                  ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-900/40' 
+                  : 'bg-red-600 hover:bg-red-500 shadow-red-900/40'
+              }`}
+            >
+              <span className="text-2xl select-none">
+                {isMuted || volume === 0 ? '🔇' : volume < 0.5 ? '🔉' : '🔊'}
               </span>
+            </button>
+
+            <div className={`relative flex flex-col items-center backdrop-blur-xl border transition-all duration-500 ease-[cubic-bezier(0.23,1,0.32,1)] overflow-hidden w-14 ${
+              showVolumeBar ? 'h-48 opacity-90 mb-[-25px]' : 'h-0 opacity-0 mb-[-56px] pointer-events-none'
+            } ${
+              radioName.includes('SMIHUN') 
+                ? 'bg-blue-950/90 border-blue-400/30 rounded-t-2xl' 
+                : 'bg-red-950/90 border-red-500/30 rounded-t-2xl'
+            }`}>
+              
+              <div className="relative w-full h-full mt-4">
+                <input
+                  type="range"
+                  min="0"
+                  max="1"
+                  step="0.01"
+                  value={isMuted ? 0 : volume}
+                  onChange={(e) => {
+                    const v = parseFloat(e.target.value);
+                    setVolume(v);
+                    if (v > 0) setIsMuted(false);
+                  }}
+                  className={`absolute inset-0 w-full h-full appearance-none bg-transparent cursor-pointer z-30 transition-colors duration-300 ${
+                    radioName.includes('SMIHUN') ? 'accent-blue-500' : 'accent-red-500'
+                  }`}
+                  style={{ 
+                    WebkitAppearance: 'slider-vertical', 
+                    appearance: 'slider-vertical' 
+                  }}
+                />
+              </div>
             </div>
           </div>
         )}
