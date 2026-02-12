@@ -32,7 +32,7 @@ export class RadioEngine {
     const [hour, minute] = kyivTime.split(':').map(Number);
 
     //return (hour >= this.nightStartHour && hour < this.dayStartHour) ? 'night' : 'day';
-    return (minute >= this.nightStartHour && hour < this.dayStartHour) ? 'night' : 'dayshort';
+    return (minute >= this.nightStartHour && hour < this.dayStartHour) ? 'night' : 'day';
   }
 
   async initialize() {
