@@ -11,7 +11,7 @@ function App() {
   const [currentArtist, setCurrentArtist] = useState(null);
   const [seek, setSeek] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isPaused, setIsPaused] = useState(false); // Local pause state
+  const [isPaused, setIsPaused] = useState(false);
   const [playlist, setPlaylist] = useState([]);
   const [duration, setDuration] = useState(0);
   const [radioName, setRadioName] = useState('is loading...');
@@ -30,9 +30,7 @@ function App() {
   const lastServerSeekRef = useRef(0);
   const resumeTimeRef = useRef(null);
 
-  // 1. Ефект для ініціалізації з'єднання (лише 1 раз при старті)
   useEffect(() => {
-    // Створюємо сокет тільки якщо його ще немає
     if (!socketRef.current) {
       socketRef.current = io(SERVER_URL);
     }
@@ -46,45 +44,43 @@ function App() {
       setListeners(users);
     });
 
-    // Очищення тільки при повному виході з додатка
     return () => {
       if (socket) {
         socket.off('connect');
         socket.off('disconnect');
         socket.off('usersUpdate');
-        // socket.disconnect(); // Можна не відключати, якщо хочете тримати сесію
       }
     };
   }, []);
 
-  // 2. Ефект для синхронізації аудіо (залежить від станів, але НЕ перепідключає сокет)
   useEffect(() => {
     if (!socketRef.current) return;
 
     const handleSync = (state) => {
       if (!audioRef.current) return;
-      
-      // Тут залишається вся ваша існуюча логіка sync...
-      // (деструктуризація, оновлення track, title, seek і т.д.)
-      const { track, title, artist, seek: serverSeek, isPlaying: serverIsPlaying, playlist: upcoming, mode } = state;
+
+      const { track, title, artist, seek: serverSeek, isPlaying: serverIsPlaying, playlist: upcoming, mode, isPreparing } = state;
+
+      if (isPreparing) {
+        setRadioName("PREPARING MODE...");
+        setCurrentTitle("Please wait...");
+        setCurrentArtist("System");
+        return; 
+      }
       
       if (mode) {
         setRadioName(mode === 'night' ? 'Radio SOSUN' : 'Radio SMIHUN');
       }
 
-      // Store last server seek position for resume sync
       lastServerSeekRef.current = serverSeek;
-      
-      // Update track metadata
+
       if (title) setCurrentTitle(title);
       if (artist) setCurrentArtist(artist);
-      
-      // Store initial server seek when first connecting (before joining)
+
       if (!isJoined && track && serverSeek !== undefined) {
         initialServerSeekRef.current = serverSeek;
       }
 
-      // Update track if changed
       if (track && track !== currentTrack) {
         setCurrentTrack(track);
         hasInitialSyncedRef.current = false; // Reset for new track
@@ -92,14 +88,13 @@ function App() {
         if (audioRef.current.src !== audioUrl) {
           audioRef.current.src = audioUrl;
           audioRef.current.load();
-          // Set initial seek position after loading
+
           audioRef.current.addEventListener('loadeddata', () => {
             if (audioRef.current && serverIsPlaying && isJoined && !isPaused) {
-              // Use the stored initial seek or current server seek
               const targetSeek = initialServerSeekRef.current !== null ? initialServerSeekRef.current : serverSeek;
               audioRef.current.currentTime = targetSeek;
               hasInitialSyncedRef.current = true;
-              // Only play if not already playing
+
               if (audioRef.current.paused) {
                 audioRef.current.play().catch(err => console.error('Play error:', err));
               }
@@ -107,21 +102,17 @@ function App() {
           }, { once: true });
         }
       } else if (track && isJoined && !audioRef.current.src) {
-        // Track is set but audio hasn't been loaded yet (user just joined)
         const audioUrl = `${SERVER_URL}/music/${encodeURIComponent(track)}`;
         audioRef.current.src = audioUrl;
         audioRef.current.load();
       }
 
-      // Update playlist
       setPlaylist(upcoming || []);
 
-      // Sync playback state (only if joined and not manually paused)
       if (isJoined && !isPaused) {
         if (serverIsPlaying !== isPlaying) {
           setIsPlaying(serverIsPlaying);
           if (serverIsPlaying) {
-            // Only play if currently paused to avoid interrupting playback
             if (audioRef.current.paused) {
               audioRef.current.play().catch(err => console.error('Play error:', err));
             }
@@ -132,13 +123,11 @@ function App() {
           }
         }
 
-        // Sync seek position - only sync if drift is significant and not currently syncing
         if (audioRef.current && audioRef.current.readyState >= 2 && !isSyncingRef.current) {
           const localSeek = audioRef.current.currentTime;
           const drift = Math.abs(localSeek - serverSeek);
           const now = Date.now();
-          
-          // Initial sync: immediately sync when first joining (before audio starts)
+
           if (!hasInitialSyncedRef.current && isJoined) {
             const targetSeek = initialServerSeekRef.current !== null ? initialServerSeekRef.current : serverSeek;
             if (Math.abs(localSeek - targetSeek) > 0.5) {
@@ -148,47 +137,36 @@ function App() {
               hasInitialSyncedRef.current = true;
               lastSyncTimeRef.current = now;
               isSyncingRef.current = false;
-              return; // Skip the rest of sync logic for initial sync
+              return; 
             } else {
               hasInitialSyncedRef.current = true;
             }
           }
-          
-          // Don't sync for the first 2 seconds after initial sync (grace period)
+
           const timeSinceJoin = now - joinTimeRef.current;
           const timeSinceLastSync = now - lastSyncTimeRef.current;
           const shouldSkipSync = timeSinceJoin < 2000 || timeSinceLastSync < 2000;
-          
-          // Check if we just resumed from pause (within last 2 seconds) - sync immediately if drift > 1s
+
           const justResumed = resumeTimeRef.current !== null && (now - resumeTimeRef.current) < 2000;
           if (justResumed && drift > 1 && !audioRef.current.paused && !isPaused) {
             isSyncingRef.current = true;
             audioRef.current.currentTime = serverSeek;
             setSeek(serverSeek);
             lastSyncTimeRef.current = now;
-            resumeTimeRef.current = null; // Clear resume tracking after sync
+            resumeTimeRef.current = null; 
             isSyncingRef.current = false;
             return;
           }
-          
-          // Clear resume tracking if enough time has passed
+
           if (resumeTimeRef.current !== null && (now - resumeTimeRef.current) >= 2000) {
             resumeTimeRef.current = null;
           }
-          
-          // Only sync if:
-          // 1. Drift is greater than 5 seconds (very lenient threshold for smoothness)
-          // 2. We haven't synced in the last 2 seconds (prevent rapid syncs)
-          // 3. Audio is actually playing
-          // 4. We're past the grace period after joining
+
           if (!shouldSkipSync && drift > 5 && serverIsPlaying && !isPaused) {
             isSyncingRef.current = true;
-            //console.log(`Drift detected: ${drift.toFixed(2)}s, syncing...`);
-            
-            // Use requestAnimationFrame for smoother sync
+
             requestAnimationFrame(() => {
               if (audioRef.current && !audioRef.current.paused) {
-                // Only sync if playing - don't interrupt if paused
                 audioRef.current.currentTime = serverSeek;
                 setSeek(serverSeek);
                 lastSyncTimeRef.current = now;
@@ -196,11 +174,9 @@ function App() {
               isSyncingRef.current = false;
             });
           } else {
-            // No significant drift, use local time for smooth playback
             setSeek(localSeek);
           }
         } else if (!audioRef.current.src || audioRef.current.readyState < 2) {
-          // Audio not ready yet, just show server time
           setSeek(serverSeek);
         }
       }
@@ -213,176 +189,8 @@ function App() {
         socketRef.current.off('sync', handleSync);
       }
     };
-  }, [isJoined, isPaused, currentTrack]); // Залежності потрібні тільки для обробника, не для з'єднання
+  }, [isJoined, isPaused, currentTrack]);
   
-  // useEffect(() => {
-  //   socketRef.current = io(SERVER_URL);
-    
-  //   socketRef.current.on('connect', () => {
-  //     //console.log('Connected to server');
-  //     setIsConnected(true);
-  //   });
-
-  //   socketRef.current.on('usersUpdate', (users) => {
-  //     setListeners(users);
-  //   });
-
-  //   socketRef.current.on('disconnect', () => {
-  //     //console.log('Disconnected from server');
-  //     setIsConnected(false);
-  //   });
-
-  //   socketRef.current.on('sync', (state) => {
-  //     if (!audioRef.current) return;
-
-  //     const { track, title, artist, seek: serverSeek, isPlaying: serverIsPlaying, playlist: upcoming, mode } = state;
-      
-  //     if (mode) {
-  //       setRadioName(mode === 'night' ? 'Radio SOSUN' : 'Radio SMIHUN');
-  //     }
-
-  //     // Store last server seek position for resume sync
-  //     lastServerSeekRef.current = serverSeek;
-      
-  //     // Update track metadata
-  //     if (title) setCurrentTitle(title);
-  //     if (artist) setCurrentArtist(artist);
-      
-  //     // Store initial server seek when first connecting (before joining)
-  //     if (!isJoined && track && serverSeek !== undefined) {
-  //       initialServerSeekRef.current = serverSeek;
-  //     }
-
-  //     // Update track if changed
-  //     if (track && track !== currentTrack) {
-  //       setCurrentTrack(track);
-  //       hasInitialSyncedRef.current = false; // Reset for new track
-  //       const audioUrl = `${SERVER_URL}/music/${encodeURIComponent(track)}`;
-  //       if (audioRef.current.src !== audioUrl) {
-  //         audioRef.current.src = audioUrl;
-  //         audioRef.current.load();
-  //         // Set initial seek position after loading
-  //         audioRef.current.addEventListener('loadeddata', () => {
-  //           if (audioRef.current && serverIsPlaying && isJoined && !isPaused) {
-  //             // Use the stored initial seek or current server seek
-  //             const targetSeek = initialServerSeekRef.current !== null ? initialServerSeekRef.current : serverSeek;
-  //             audioRef.current.currentTime = targetSeek;
-  //             hasInitialSyncedRef.current = true;
-  //             // Only play if not already playing
-  //             if (audioRef.current.paused) {
-  //               audioRef.current.play().catch(err => console.error('Play error:', err));
-  //             }
-  //           }
-  //         }, { once: true });
-  //       }
-  //     } else if (track && isJoined && !audioRef.current.src) {
-  //       // Track is set but audio hasn't been loaded yet (user just joined)
-  //       const audioUrl = `${SERVER_URL}/music/${encodeURIComponent(track)}`;
-  //       audioRef.current.src = audioUrl;
-  //       audioRef.current.load();
-  //     }
-
-  //     // Update playlist
-  //     setPlaylist(upcoming || []);
-
-  //     // Sync playback state (only if joined and not manually paused)
-  //     if (isJoined && !isPaused) {
-  //       if (serverIsPlaying !== isPlaying) {
-  //         setIsPlaying(serverIsPlaying);
-  //         if (serverIsPlaying) {
-  //           // Only play if currently paused to avoid interrupting playback
-  //           if (audioRef.current.paused) {
-  //             audioRef.current.play().catch(err => console.error('Play error:', err));
-  //           }
-  //         } else {
-  //           if (!audioRef.current.paused) {
-  //             audioRef.current.pause();
-  //           }
-  //         }
-  //       }
-
-  //       // Sync seek position - only sync if drift is significant and not currently syncing
-  //       if (audioRef.current && audioRef.current.readyState >= 2 && !isSyncingRef.current) {
-  //         const localSeek = audioRef.current.currentTime;
-  //         const drift = Math.abs(localSeek - serverSeek);
-  //         const now = Date.now();
-          
-  //         // Initial sync: immediately sync when first joining (before audio starts)
-  //         if (!hasInitialSyncedRef.current && isJoined) {
-  //           const targetSeek = initialServerSeekRef.current !== null ? initialServerSeekRef.current : serverSeek;
-  //           if (Math.abs(localSeek - targetSeek) > 0.5) {
-  //             isSyncingRef.current = true;
-  //             audioRef.current.currentTime = targetSeek;
-  //             setSeek(targetSeek);
-  //             hasInitialSyncedRef.current = true;
-  //             lastSyncTimeRef.current = now;
-  //             isSyncingRef.current = false;
-  //             return; // Skip the rest of sync logic for initial sync
-  //           } else {
-  //             hasInitialSyncedRef.current = true;
-  //           }
-  //         }
-          
-  //         // Don't sync for the first 2 seconds after initial sync (grace period)
-  //         const timeSinceJoin = now - joinTimeRef.current;
-  //         const timeSinceLastSync = now - lastSyncTimeRef.current;
-  //         const shouldSkipSync = timeSinceJoin < 2000 || timeSinceLastSync < 2000;
-          
-  //         // Check if we just resumed from pause (within last 2 seconds) - sync immediately if drift > 1s
-  //         const justResumed = resumeTimeRef.current !== null && (now - resumeTimeRef.current) < 2000;
-  //         if (justResumed && drift > 1 && !audioRef.current.paused && !isPaused) {
-  //           isSyncingRef.current = true;
-  //           audioRef.current.currentTime = serverSeek;
-  //           setSeek(serverSeek);
-  //           lastSyncTimeRef.current = now;
-  //           resumeTimeRef.current = null; // Clear resume tracking after sync
-  //           isSyncingRef.current = false;
-  //           return;
-  //         }
-          
-  //         // Clear resume tracking if enough time has passed
-  //         if (resumeTimeRef.current !== null && (now - resumeTimeRef.current) >= 2000) {
-  //           resumeTimeRef.current = null;
-  //         }
-          
-  //         // Only sync if:
-  //         // 1. Drift is greater than 5 seconds (very lenient threshold for smoothness)
-  //         // 2. We haven't synced in the last 2 seconds (prevent rapid syncs)
-  //         // 3. Audio is actually playing
-  //         // 4. We're past the grace period after joining
-  //         if (!shouldSkipSync && drift > 5 && serverIsPlaying && !isPaused) {
-  //           isSyncingRef.current = true;
-  //           //console.log(`Drift detected: ${drift.toFixed(2)}s, syncing...`);
-            
-  //           // Use requestAnimationFrame for smoother sync
-  //           requestAnimationFrame(() => {
-  //             if (audioRef.current && !audioRef.current.paused) {
-  //               // Only sync if playing - don't interrupt if paused
-  //               audioRef.current.currentTime = serverSeek;
-  //               setSeek(serverSeek);
-  //               lastSyncTimeRef.current = now;
-  //             }
-  //             isSyncingRef.current = false;
-  //           });
-  //         } else {
-  //           // No significant drift, use local time for smooth playback
-  //           setSeek(localSeek);
-  //         }
-  //       } else if (!audioRef.current.src || audioRef.current.readyState < 2) {
-  //         // Audio not ready yet, just show server time
-  //         setSeek(serverSeek);
-  //       }
-  //     }
-  //   });
-
-  //   return () => {
-  //     if (socketRef.current) {
-  //       socketRef.current.disconnect();
-  //     }
-  //   };
-  // }, [currentTrack, isPlaying, isJoined, isPaused]);
-
-  // Handle audio metadata loaded
   const handleLoadedMetadata = () => {
     if (audioRef.current && socketRef.current) {
       const trackDuration = audioRef.current.duration;
@@ -392,46 +200,37 @@ function App() {
     }
   };
 
-  // Handle audio time update - let this run naturally for smooth playback
   const handleTimeUpdate = () => {
     if (audioRef.current && isJoined && !isSyncingRef.current) {
-      // Only update if we're not currently syncing
       setSeek(audioRef.current.currentTime);
     }
   };
 
-  // Handle track end
   const handleEnded = () => {
-    // Notify server that track ended
     if (socketRef.current) {
       socketRef.current.emit('trackEnd');
-      // console.log('Track ended, notifying server');
     }
   };
 
-  // Handle join radio button click
   const handleJoinRadio = async () => {
     setIsJoined(true);
     joinTimeRef.current = Date.now();
   };
 
-  // Effect to handle starting playback when joining (only once)
   useEffect(() => {
     if (!isJoined || !audioRef.current || !currentTrack || hasStartedPlaybackRef.current || isPaused) return;
 
     const audioUrl = `${SERVER_URL}/music/${encodeURIComponent(currentTrack)}`;
-    
-    // Load the track if not already loaded
+
     if (audioRef.current.src !== audioUrl) {
       audioRef.current.src = audioUrl;
       audioRef.current.load();
     }
 
-    // Start playing when audio is ready (only once)
     const startPlayback = () => {
       if (audioRef.current && isPlaying && !hasStartedPlaybackRef.current) {
         hasStartedPlaybackRef.current = true;
-        // Use the stored initial server seek position
+
         const targetSeek = initialServerSeekRef.current !== null ? initialServerSeekRef.current : 0;
         if (targetSeek > 0 && audioRef.current.readyState >= 2) {
           audioRef.current.currentTime = targetSeek;
@@ -443,16 +242,14 @@ function App() {
           })
           .catch(err => {
             console.error('Failed to start audio:', err);
-            hasStartedPlaybackRef.current = false; // Reset on error
+            hasStartedPlaybackRef.current = false;
           });
       }
     };
 
     if (audioRef.current.readyState >= 2) {
-      // Audio is already loaded
       startPlayback();
     } else {
-      // Wait for audio to load
       const handleLoad = () => {
         startPlayback();
         audioRef.current.removeEventListener('loadeddata', handleLoad);
@@ -463,7 +260,6 @@ function App() {
     }
   }, [isJoined, currentTrack, isPlaying]);
 
-  // Reset playback flag when track changes
   useEffect(() => {
     if (currentTrack) {
       hasStartedPlaybackRef.current = false;
@@ -472,25 +268,20 @@ function App() {
     }
   }, [currentTrack]);
 
-  // Handle pause/play toggle
   const handlePausePlay = () => {
     if (!audioRef.current) return;
     
     if (isPaused) {
-      // Resume playback - sync to server position if needed
       const localSeek = audioRef.current.currentTime;
       const serverSeek = lastServerSeekRef.current;
       const drift = Math.abs(localSeek - serverSeek);
-      
-      // If drift is more than 1 second, sync immediately on resume
+
       if (drift > 1) {
         audioRef.current.currentTime = serverSeek;
         setSeek(serverSeek);
         lastSyncTimeRef.current = Date.now();
-        //console.log(`Resuming after pause - syncing to server position (drift: ${drift.toFixed(2)}s)`);
       }
-      
-      // Clear pause tracking and mark resume time
+
       pauseTimeRef.current = null;
       pauseServerSeekRef.current = null;
       resumeTimeRef.current = Date.now();
@@ -503,7 +294,6 @@ function App() {
           console.error('Failed to resume playback:', err);
         });
     } else {
-      // Pause playback - store pause time and server position
       pauseTimeRef.current = Date.now();
       pauseServerSeekRef.current = lastServerSeekRef.current;
       audioRef.current.pause();
@@ -511,7 +301,6 @@ function App() {
     }
   };
 
-  // Format time helper
   const formatTime = (seconds) => {
     if (!isFinite(seconds) || isNaN(seconds)) return '0:00';
     const mins = Math.floor(seconds / 60);
@@ -519,7 +308,6 @@ function App() {
     return `${mins}:${secs.toString().padStart(2, '0')}`;
   };
 
-    // Визначаємо ліміт відображення
   const displayLimit = 3;
   const visibleListeners = listeners.slice(0, displayLimit);
   const hiddenListeners = listeners.slice(displayLimit);
@@ -691,14 +479,13 @@ function App() {
         <h1 
           className={`text-5xl font-extrabold mb-8 text-center transition-all duration-1000 tracking-wider`}
           style={{
-            color: isNight ? '#bc0000' : '#ffffff', // Світла кров вночі, білий вдень
-            WebkitTextStroke: isNight ? '1px #4a0404' : 'none', // Темне обведення
-            textShadow: isNight ? '0 0 15px rgba(188, 0, 0, 0.3)' : 'none', // М'яке світіння
+            color: isNight ? '#bc0000' : '#ffffff', 
+            WebkitTextStroke: isNight ? '1px #4a0404' : 'none', 
+            textShadow: isNight ? '0 0 15px rgba(188, 0, 0, 0.3)' : 'none', 
             fontFamily: "'Segoe UI', Roboto, sans-serif"
           }}
         >{radioName}</h1>
-        
-        {/* Connection Status */}
+
         <div className="mb-6 text-center">
           <span className={`inline-block px-4 py-2 rounded-full text-sm ${
             isConnected ? 'bg-green-600' : 'bg-red-600'
@@ -707,7 +494,6 @@ function App() {
           </span>
         </div>
 
-        {/* Audio Element (hidden) */}
         <audio
           ref={audioRef}
           onLoadedMetadata={handleLoadedMetadata}
@@ -716,7 +502,6 @@ function App() {
           preload="auto"
         />
 
-        {/* Join Radio Button */}
         {!isJoined && (
           <div className="text-center mb-8">
             <button
@@ -732,7 +517,6 @@ function App() {
           </div>
         )}
 
-        {/* Current Track Info */}
         {isJoined && currentTrack && (
           <div className="bg-gray-800 rounded-lg p-6 mb-6">
             <h2 className="text-2xl font-semibold mb-4">Now Playing</h2>
@@ -749,8 +533,7 @@ function App() {
                 <p className="text-xl text-blue-400">{currentTrack}</p>
               )}
             </div>
-            
-            {/* Progress Bar */}
+
             <div className="mb-2">
               <div className={`w-full rounded-full h-2 ${isNight ? 'bg-[#2d1212]' : 'bg-gray-700'}`}>
                 <div
@@ -761,14 +544,12 @@ function App() {
                 />
               </div>
             </div>
-            
-            {/* Time Display */}
+
             <div className="flex justify-between text-sm text-gray-400">
               <span>{formatTime(seek)}</span>
               <span>{formatTime(duration)}</span>
             </div>
 
-            {/* Play/Pause Controls */}
             <div className="mt-4 flex items-center justify-center gap-4">
               <button
                 onClick={handlePausePlay}
@@ -795,7 +576,6 @@ function App() {
           </div>
         )}
 
-        {/* Upcoming Songs */}
         {isJoined && playlist.length > 0 && (
           <div className="bg-gray-800 rounded-lg p-6">
             <h2 className="text-2xl font-semibold mb-4">Upcoming Songs</h2>
@@ -820,7 +600,6 @@ function App() {
           </div>
         )}
 
-        {/* Empty State */}
         {isJoined && !currentTrack && (
           <div className="bg-gray-800 rounded-lg p-6 text-center">
             <p className="text-gray-400">Waiting for music to start...</p>
@@ -832,4 +611,3 @@ function App() {
 }
 
 export default App;
-

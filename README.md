@@ -18,7 +18,9 @@ Radio/
 ├── server/           # Node.js backend
 │   ├── music/        
 │   │   ├── day/      # Place your .ogg files here
-│   │   ├── night/    # Place your .ogg files here
+│   │   └── night/    # Place your .ogg files here
+│   ├── public/
+│   │   └── avatars/  # Place your .png files here 
 │   ├── index.js      # Express server with Socket.io
 │   ├── radioEngine.js # Playlist and playback engine
 │   └── package.json

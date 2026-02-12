@@ -26,7 +26,6 @@ const io = new Server(httpServer, {
 app.use(cors());
 app.use(express.json());
 
-// Static serve the music folder
 app.use('/music', express.static(join(__dirname, 'music')));
 
 const clientDistPath = path.join(__dirname, '../client/dist');
@@ -48,15 +47,12 @@ const oligarchs = [
 ];
 let activeUsers = {};
 
-// Initialize Radio Engine
 const radioEngine = new RadioEngine(join(__dirname, 'music'));
 
-// Initialize and start the radio
 radioEngine.initialize().then(() => {
   console.log('Radio Engine initialized');
   radioEngine.start();
-  
-  // Broadcast state every 2 seconds
+
   setInterval(() => {
     const state = radioEngine.getState();
     io.emit('sync', state);
@@ -65,15 +61,11 @@ radioEngine.initialize().then(() => {
   console.error('Failed to initialize radio engine:', err);
 });
 
-// Socket.io connection handling
 io.on('connection', (socket) => {
-  // const randomName = oligarchs[Math.floor(Math.random() * oligarchs.length)];
-  // activeUsers[socket.id] = { name: randomName, color: '#' + Math.floor(Math.random()*16777215).toString(16) };
-
   const person = oligarchs[Math.floor(Math.random() * oligarchs.length)];
   activeUsers[socket.id] = { 
     name: person.name, 
-    img: person.img, // Передаємо назву файлу
+    img: person.img, 
     color: '#' + Math.floor(Math.random()*16777215).toString(16) 
   };
 
@@ -81,16 +73,13 @@ io.on('connection', (socket) => {
 
   io.emit('usersUpdate', Object.values(activeUsers));
 
-  // Send current state immediately on connection
   const state = radioEngine.getState();
   socket.emit('sync', state);
-  
-  // Handle track end event from client
+
   socket.on('trackEnd', () => {
     radioEngine.onTrackEnd();
   });
 
-  // Handle track duration from client
   socket.on('trackDuration', (duration) => {
     radioEngine.setTrackDuration(duration);
   });
@@ -112,6 +101,5 @@ httpServer.listen(PORT, () => {
 app.use('/avatars', express.static(join(__dirname, 'public', 'avatars')));
 
 app.get('*', (req, res) => {
-  // Цей код спрацює, тільки якщо запит НЕ був до /music і НЕ до статичних файлів
   res.sendFile(path.join(clientDistPath, 'index.html'));
 });

@@ -1,10 +1,12 @@
 import { readdir } from 'fs/promises';
-import { join, basename } from 'path'; // Додав basename для чистих назв
+import { join, basename } from 'path'; 
 import { parseFile } from 'music-metadata';
 
 export class RadioEngine {
   constructor(musicPath) {
-    this.musicPath = musicPath; // Це шлях до папки /music
+    this.musicPath = musicPath;
+    this.dayStartHour = parseInt(process.env.DAY_START_HOUR) || 6;
+    this.nightStartHour = parseInt(process.env.NIGHT_START_HOUR) || 0;
     this.playlist = [];
     this.trackMetadata = new Map();
     this.currentIndex = 0;
@@ -13,17 +15,24 @@ export class RadioEngine {
     this.currentTrack = null;
     this.currentTrackDuration = null;
     this.initialized = false;
-    this.currentMode = null; 
+    this.currentMode = null;
+    this.isTransitioning = false; 
+    this.minTrackPlayTime = 5000;
   }
 
   getDesiredMode() {
-    const hour = new Intl.DateTimeFormat('en-GB', {
+    const now = new Date();
+    const kyivTime = new Intl.DateTimeFormat('en-GB', {
       timeZone: 'Europe/Kyiv',
       hour: 'numeric',
+      minute: 'numeric',
       hour12: false
-    }).format(new Date());
-    // 00:00 - 06:00 — Night (SOSUN), решта — Day (SMIHUN)
-    return (hour >= 0 && hour < 6) ? 'night' : 'day';
+    }).format(now);
+  
+    const [hour, minute] = kyivTime.split(':').map(Number);
+
+    //return (hour >= this.nightStartHour && hour < this.dayStartHour) ? 'night' : 'day';
+    return (minute >= this.nightStartHour && hour < this.dayStartHour) ? 'night' : 'dayshort';
   }
 
   async initialize() {
@@ -31,16 +40,13 @@ export class RadioEngine {
       const mode = this.getDesiredMode();
       this.currentMode = mode;
       
-      // Склеюємо шлях: music + day/night
       const modePath = join(this.musicPath, mode);
       
       const files = await readdir(modePath);
-      
-      // Важливо: зберігаємо шлях як "day/track.ogg", 
-      // щоб static server у index.js міг його знайти
+
       this.playlist = files
         .filter(file => file.toLowerCase().endsWith('.ogg'))
-        .map(file => join(mode, file).replace(/\\/g, '/')); // Замінюємо зворотні слеші для URL
+        .map(file => join(mode, file).replace(/\\/g, '/'));
       
       if (this.playlist.length === 0) {
         throw new Error(`No OGG files found in ${modePath}`);
@@ -58,7 +64,6 @@ export class RadioEngine {
   }
 
   async extractMetadata() {
-    // Очищуємо стару карту метаданих перед завантаженням нових
     this.trackMetadata.clear();
 
     const metadataPromises = this.playlist.map(async (relativeFilePath) => {
@@ -81,28 +86,48 @@ export class RadioEngine {
     await Promise.all(metadataPromises);
   }
 
-  async nextTrack() {
+  async nextTrack(force = false) {
+    const now = Date.now();
+    const timePlayed = this.startTime ? now - this.startTime : 0;
+
+    if (!force && timePlayed < this.minTrackPlayTime && this.currentTrack) {
+      console.log(`[Radio] Prevented premature track skip. Played only ${timePlayed}ms`);
+      return;
+    }
+
     const desiredMode = this.getDesiredMode();
 
     if (this.currentMode !== desiredMode) {
-      console.log(`[Radio] Mode switch: ${this.currentMode} -> ${desiredMode}`);
-      await this.initialize();
-      // initialize() скидає currentIndex на 0 і робить shuffle
+      console.log(`[Radio] Mode switch detected: ${this.currentMode} -> ${desiredMode}`);
+      
+      this.isTransitioning = true; 
+      this.isPlaying = false;
+      this.currentTrack = null;
+
+      try {
+        await this.initialize(); 
+
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        
+        console.log(`[Radio] Transition to ${desiredMode} complete.`);
+      } catch (err) {
+        console.error('Transition error:', err);
+      } finally {
+        this.isTransitioning = false;
+        this.start();
+      }
     } else {
       this.currentIndex++;
       if (this.currentIndex >= this.playlist.length) {
         this.shuffle();
         this.currentIndex = 0;
       }
+      this.currentTrack = this.playlist[this.currentIndex];
+      this.currentTrackDuration = null;
+      this.startTime = Date.now();
+      console.log(`[Radio] Playing: ${this.currentTrack}`);
     }
-
-    this.currentTrack = this.playlist[this.currentIndex];
-    this.currentTrackDuration = null;
-    this.startTime = Date.now();
   }
-
-  // ... решта методів (getSeek, getState, shuffle, start) як у твоєму оригіналі
-  // Тільки в getState переконайся, що він використовує оновлений плейлист
   
   getTrackMetadata(filename) {
     return this.trackMetadata.get(filename) || {
@@ -138,6 +163,17 @@ export class RadioEngine {
   }
 
   getState() {
+    if (this.isTransitioning || !this.currentTrack) {
+      return { 
+        track: null, 
+        seek: 0, 
+        isPlaying: false, 
+        playlist: [], 
+        mode: this.currentMode,
+        isPreparing: true 
+      };
+    }
+
     if (this.isPlaying && this.currentTrack && this.currentTrackDuration) {
       if (this.getSeek() >= this.currentTrackDuration - 0.1) {
         this.nextTrack();
@@ -171,6 +207,6 @@ export class RadioEngine {
   }
   
   onTrackEnd() {
-    this.nextTrack();
+    this.nextTrack(false);
   }
 }
