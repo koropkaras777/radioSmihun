@@ -16,6 +16,8 @@ function App() {
   const [duration, setDuration] = useState(0);
   const [radioName, setRadioName] = useState('is loading...');
   const [listeners, setListeners] = useState([]);
+  const [showOnlyOne, setShowOnlyOne] = useState(false);
+  const [isBlurred, setIsBlurred] = useState(true);
   
   const audioRef = useRef(null);
   const socketRef = useRef(null);
@@ -577,23 +579,58 @@ function App() {
         )}
 
         {isJoined && playlist.length > 0 && (
-          <div className="bg-gray-800 rounded-lg p-6">
-            <h2 className="text-2xl font-semibold mb-4">Upcoming Songs</h2>
-            <ul className="space-y-2">
-              {playlist.map((track, index) => (
+          <div className="bg-gray-800 rounded-lg p-6 mt-6">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-semibold text-gray-400">Upcoming Songs</h2>
+              
+              <div className="flex items-center gap-4">
+                <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-400 hover:text-white transition-colors">
+                  <input 
+                    type="checkbox" 
+                    checked={showOnlyOne}
+                    onChange={(e) => setShowOnlyOne(e.target.checked)}
+                    className={`w-4 h-4 rounded border-gray-600 bg-gray-700 focus:ring-0 ${
+                      showOnlyOne ? (radioName.includes('SMIHUN') ? 'text-blue-500' : 'text-red-500') : ''
+                    }`}
+                  />
+                  Only one
+                </label>
+
+                <button 
+                  onClick={() => setIsBlurred(!isBlurred)}
+                  className={`p-2 rounded-full transition-all duration-300 ${
+                    isBlurred 
+                      ? (radioName.includes('SMIHUN') 
+                          ? 'bg-blue-900/40 text-blue-400 border border-blue-500/30'
+                          : 'bg-red-900/40 text-red-500 border border-red-500/30')
+                      : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                  }`}
+                  title={isBlurred ? "Show titles" : "Hide titles"}
+                >
+                  <span className="text-lg leading-none flex items-center justify-center">
+                    {isBlurred ? '👁️‍🗨️' : '👁️'}
+                  </span>
+                </button>
+              </div>
+            </div>
+
+            <ul className="space-y-2 mt-4">
+              {playlist.slice(0, showOnlyOne ? 1 : 10).map((track, index) => (
                 <li
                   key={`${track.filename || track}-${index}`}
-                  className="p-3 bg-gray-700 rounded hover:bg-gray-600 transition-colors"
+                  className={`p-3 rounded transition-all duration-300 ${
+                    isBlurred 
+                      ? (radioName.includes('SMIHUN') ? 'bg-blue-900/10 border border-blue-900/20' : 'bg-red-900/10 border border-red-900/20') 
+                      : 'bg-gray-700'
+                  }`}
                 >
-                  <span className="text-gray-400 mr-2">#{index + 1}</span>
-                  {track.title && track.artist ? (
+                  <div className={`flex items-center gap-3 transition-all duration-500 ${isBlurred ? 'blur-md select-none opacity-50' : 'blur-0'}`}>
+                    <span className="text-gray-500 font-mono text-xs">#{index + 1}</span>
                     <div>
-                      <span className="font-semibold">{track.title}</span>
-                      <span className="text-gray-400 ml-2">by {track.artist}</span>
+                      <span className="font-semibold block leading-tight">{track.title || track.filename}</span>
+                      <span className="text-gray-400 text-xs">{track.artist || 'Unknown Artist'}</span>
                     </div>
-                  ) : (
-                    <span>{track.filename || track}</span>
-                  )}
+                  </div>
                 </li>
               ))}
             </ul>
