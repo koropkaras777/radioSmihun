@@ -95,6 +95,12 @@ function App() {
         document.title = "Radio SMIHUN";
       }
 
+      if (favicon) {
+        const timestamp = new Date().getTime();
+        const iconPath = radioName.includes('SMIHUN') ? '/icon-smihun-192.png' : '/icon-sosun-192.png';
+        favicon.href = `${iconPath}?v=${timestamp}`;
+      }
+
       if (!isJoined && track && serverSeek !== undefined) {
         initialServerSeekRef.current = serverSeek;
       }

@@ -25,6 +25,7 @@ Radio/
 │   ├── radioEngine.js # Playlist and playback engine
 │   └── package.json
 └── client/           # React frontend
+    ├── public/       # Favicon icons
     ├── src/
     │   ├── App.jsx   # Main React component
     │   ├── main.jsx
