@@ -21,6 +21,8 @@ function App() {
   const [volume, setVolume] = useState(0.5);
   const [isMuted, setIsMuted] = useState(false);
   const [showVolumeBar, setShowVolumeBar] = useState(false);
+  const [currentCover, setCurrentCover] = useState(null);
+  const [lastTrackKey, setLastTrackKey] = useState("");
   
   const audioRef = useRef(null);
   const socketRef = useRef(null);
@@ -65,6 +67,21 @@ function App() {
   }, [volume, isMuted]);
 
   useEffect(() => {
+    const favicon = document.getElementById('favicon');
+    if (!favicon) return;
+  
+    const mode = radioName.includes('SMIHUN') ? 'SMIHUN' : 'SOSUN';
+    const timestamp = new Date().getTime();
+    
+    // Якщо є обкладинка — ставимо її, якщо ні — дефолтну мемну іконку
+    const iconPath = currentCover 
+      ? currentCover 
+      : (mode === 'SMIHUN' ? '/icon-smihun-192.png' : '/icon-sosun-192.png');
+  
+    favicon.href = currentCover ? iconPath : `${iconPath}?v=${timestamp}`;
+  }, [currentCover, radioName]);
+
+  useEffect(() => {
     if (!socketRef.current) return;
 
     const handleSync = (state) => {
@@ -88,18 +105,80 @@ function App() {
       if (title) setCurrentTitle(title);
       if (artist) setCurrentArtist(artist);
 
+      const fetchCover = async (artist, title) => {
+        try {
+          const query = encodeURIComponent(`${artist} ${title}`);
+          const response = await fetch(`https://itunes.apple.com/search?term=${query}&entity=song&limit=1`);
+          const data = await response.json();
+          
+          if (data.results && data.results.length > 0) {
+            return data.results[0].artworkUrl100;
+          }
+        } catch (e) {
+          console.error("Помилка пошуку обкладинки", e);
+        }
+        return null;
+      };
+  
       if (title && artist) {
+        const trackKey = `${artist}-${title}`;
         const mode = radioName.includes('SMIHUN') ? 'SMIHUN' : 'SOSUN';
+
         document.title = `${title} - ${artist} · Radio ${mode}`;
+
+        if (trackKey !== lastTrackKey) {
+          setLastTrackKey(trackKey); 
+
+          const updateIcon = async () => {
+            const coverUrl = await fetchCover(artist, title);
+            // console.log(coverUrl);
+            setCurrentCover(coverUrl); 
+          };
+          
+          updateIcon();
+        }
       } else {
         document.title = "Radio SMIHUN";
+        setCurrentCover(null);
+        setLastTrackKey("");
       }
+      // if (title && artist) {
+      //   const trackKey = `${artist}-${title}`;
+      //   const mode = radioName.includes('SMIHUN') ? 'SMIHUN' : 'SOSUN';
 
-      if (favicon) {
-        const timestamp = new Date().getTime();
-        const iconPath = radioName.includes('SMIHUN') ? '/icon-smihun-192.png' : '/icon-sosun-192.png';
-        favicon.href = `${iconPath}?v=${timestamp}`;
-      }
+      //   document.title = `${title} - ${artist} · Radio ${mode}`;
+
+      //   if (trackKey !== lastTrackKey) {
+      //     setLastTrackKey(trackKey); 
+
+      //     const updateIcon = async () => {
+      //       const coverUrl = await fetchCover(artist, title);
+      //       console.log(coverUrl);
+      //       setCurrentCover(coverUrl); 
+      //     };
+          
+      //     updateIcon();
+      //   }
+      // } else {
+      //   document.title = "Radio SMIHUN";
+      //   setCurrentCover(null);
+      //   setLastTrackKey("");
+      // }
+
+      // if (iconPath?) {
+      //   iconPath = currentTrack.cover;
+      // } else {
+      //   iconPath = mode === 'SMIHUN' ? '/icon-smihun-192.png' : '/icon-sosun-192.png';
+      // }
+
+      // if (favicon) {
+      //   favicon.href = iconPath.startsWith('data:') ? iconPath : `${iconPath}?v=${timestamp}`;
+      // }
+      // if (favicon) {
+      //   const timestamp = new Date().getTime();
+      //   const iconPath = radioName.includes('SMIHUN') ? '/icon-smihun-192.png' : '/icon-sosun-192.png';
+      //   favicon.href = `${iconPath}?v=${timestamp}`;
+      // }
 
       if (!isJoined && track && serverSeek !== undefined) {
         initialServerSeekRef.current = serverSeek;
