@@ -73,12 +73,14 @@ export class RadioEngine {
         
         const title = metadata.common.title || basename(relativeFilePath, '.ogg');
         const artist = metadata.common.artist || 'Unknown Artist';
+        const album = metadata.common.album || 'Unknown Album';
         
-        this.trackMetadata.set(relativeFilePath, { title, artist });
+        this.trackMetadata.set(relativeFilePath, { title, artist, album });
       } catch (error) {
         this.trackMetadata.set(relativeFilePath, { 
           title: basename(relativeFilePath, '.ogg'), 
-          artist: 'Unknown Artist' 
+          artist: 'Unknown Artist',
+          album: 'Unknown Album' 
         });
       }
     });
@@ -132,7 +134,8 @@ export class RadioEngine {
   getTrackMetadata(filename) {
     return this.trackMetadata.get(filename) || {
       title: basename(filename, '.ogg'),
-      artist: 'Unknown Artist'
+      artist: 'Unknown Artist',
+      album: 'Unknown Album'
     };
   }
   
@@ -190,13 +193,14 @@ export class RadioEngine {
       const idx = (this.currentIndex + i) % this.playlist.length;
       const trackFile = this.playlist[idx];
       const metadata = this.getTrackMetadata(trackFile);
-      upcoming.push({ filename: trackFile, title: metadata.title, artist: metadata.artist });
+      upcoming.push({ filename: trackFile, title: metadata.title, artist: metadata.artist, album: metadata.album });
     }
 
     return {
       track: this.currentTrack,
       title: currentMetadata.title,
       artist: currentMetadata.artist,
+      album: currentMetadata.album,
       seek: seek,
       isPlaying: this.isPlaying,
       playlist: upcoming,

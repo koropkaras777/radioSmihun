@@ -22,7 +22,9 @@ function App() {
   const [isMuted, setIsMuted] = useState(false);
   const [showVolumeBar, setShowVolumeBar] = useState(false);
   const [currentCover, setCurrentCover] = useState(null);
+  const [currentAlbum, setCurrentAlbum] = useState(null);
   const [lastTrackKey, setLastTrackKey] = useState("");
+
   
   const audioRef = useRef(null);
   const socketRef = useRef(null);
@@ -87,7 +89,7 @@ function App() {
     const handleSync = (state) => {
       if (!audioRef.current) return;
 
-      const { track, title, artist, seek: serverSeek, isPlaying: serverIsPlaying, playlist: upcoming, mode, isPreparing } = state;
+      const { track, title, artist, album, seek: serverSeek, isPlaying: serverIsPlaying, playlist: upcoming, mode, isPreparing } = state;
 
       if (isPreparing) {
         setRadioName("PREPARING MODE...");
@@ -104,6 +106,7 @@ function App() {
 
       if (title) setCurrentTitle(title);
       if (artist) setCurrentArtist(artist);
+      if (album) setCurrentAlbum(album);
 
       const fetchCover = async (artist, title) => {
         try {
@@ -142,43 +145,6 @@ function App() {
         setCurrentCover(null);
         setLastTrackKey("");
       }
-      // if (title && artist) {
-      //   const trackKey = `${artist}-${title}`;
-      //   const mode = radioName.includes('SMIHUN') ? 'SMIHUN' : 'SOSUN';
-
-      //   document.title = `${title} - ${artist} · Radio ${mode}`;
-
-      //   if (trackKey !== lastTrackKey) {
-      //     setLastTrackKey(trackKey); 
-
-      //     const updateIcon = async () => {
-      //       const coverUrl = await fetchCover(artist, title);
-      //       console.log(coverUrl);
-      //       setCurrentCover(coverUrl); 
-      //     };
-          
-      //     updateIcon();
-      //   }
-      // } else {
-      //   document.title = "Radio SMIHUN";
-      //   setCurrentCover(null);
-      //   setLastTrackKey("");
-      // }
-
-      // if (iconPath?) {
-      //   iconPath = currentTrack.cover;
-      // } else {
-      //   iconPath = mode === 'SMIHUN' ? '/icon-smihun-192.png' : '/icon-sosun-192.png';
-      // }
-
-      // if (favicon) {
-      //   favicon.href = iconPath.startsWith('data:') ? iconPath : `${iconPath}?v=${timestamp}`;
-      // }
-      // if (favicon) {
-      //   const timestamp = new Date().getTime();
-      //   const iconPath = radioName.includes('SMIHUN') ? '/icon-smihun-192.png' : '/icon-sosun-192.png';
-      //   favicon.href = `${iconPath}?v=${timestamp}`;
-      // }
 
       if (!isJoined && track && serverSeek !== undefined) {
         initialServerSeekRef.current = serverSeek;
@@ -622,19 +588,53 @@ function App() {
 
         {isJoined && currentTrack && (
           <div className="bg-gray-800 rounded-lg p-6 mb-6">
-            <h2 className="text-2xl font-semibold mb-4">Now Playing</h2>
-            <div className="mb-4">
-              {currentTitle && (
-                <p className={`text-2xl font-bold mb-1 transition-colors ${
-                  isNight ? 'text-[#bc0000]' : 'text-blue-400'
-                }`}>{currentTitle}</p>
-              )}
-              {currentArtist && (
-                <p className="text-lg text-gray-300">{currentArtist}</p>
-              )}
-              {!currentTitle && (
-                <p className="text-xl text-blue-400">{currentTrack}</p>
-              )}
+            <h2 className="text-2xl font-semibold mb-4 text-gray-400">Now Playing</h2>
+
+            <div className="flex flex-row items-center gap-4 md:gap-6 mb-6 overflow-hidden">
+              {/* Обкладинка */}
+              <div className="relative shrink-0">
+                <img 
+                  src={currentCover || (isNight ? '/icon-sosun-192.png' : '/icon-smihun-192.png')} 
+                  alt="Cover"
+
+                  className={`w-20 h-20 object-cover rounded-lg shadow-2xl border-2 transition-all duration-500 ${
+                    isNight ? 'border-red-900/30' : 'border-blue-900/30'
+                  }`}
+                  onError={(e) => {
+                    e.target.src = isNight ? '/icon-sosun-192.png' : '/icon-smihun-192.png';
+                  }}
+                />
+              </div>
+
+              <div className="flex-1 min-w-0 flex flex-col justify-center overflow-hidden">
+                {currentTitle && (
+                  /* Клас mask-active додається тільки якщо текст довгий */
+                  <div className={`marquee-wrapper ${currentTitle.length > 20 ? 'mask-active' : ''}`}>
+                    <div className={`text-xl md:text-3xl font-black mb-1 transition-colors ${
+                      isNight ? 'text-[#bc0000]' : 'text-blue-400'
+                    } ${currentTitle.length > 20 ? 'animate-marquee' : ''}`}>
+                      <span>{currentTitle}</span>
+                      {/* Рендеримо дублікат тільки якщо текст дійсно довгий */}
+                      {currentTitle.length > 20 && <span className="ml-12">{currentTitle}</span>}
+                    </div>
+                  </div>
+                )}
+
+                {(currentArtist || currentAlbum) && (
+                  <div className={`marquee-wrapper ${
+                    (currentArtist?.length + (currentAlbum?.length || 0)) > 30 ? 'mask-active' : ''
+                  }`}>
+                    <div className={`text-sm md:text-xl text-gray-300 font-medium ${
+                      (currentArtist?.length + (currentAlbum?.length || 0)) > 30 ? 'animate-marquee' : ''
+                    }`}>
+                      <span>{currentArtist}{currentAlbum && ` · ${currentAlbum}`}</span>
+                      {(currentArtist?.length + (currentAlbum?.length || 0)) > 30 && (
+                        <span className="ml-12">{currentArtist}{currentAlbum && ` · ${currentAlbum}`}</span>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
             </div>
 
             <div className="mb-2">
@@ -648,26 +648,22 @@ function App() {
               </div>
             </div>
 
-            <div className="flex justify-between text-sm text-gray-400">
+            <div className="flex justify-between text-sm text-gray-400 font-mono">
               <span>{formatTime(seek)}</span>
               <span>{formatTime(duration)}</span>
             </div>
 
-            <div className="mt-4 flex items-center justify-center gap-4">
+            <div className="mt-6 flex items-center justify-center gap-4">
               <button
                 onClick={handlePausePlay}
-                className="bg-blue-600 hover:bg-blue-700 px-6 py-3 rounded-lg text-lg font-semibold transition-colors flex items-center gap-2"
+                className={`px-8 py-3 rounded-xl text-lg font-bold transition-all transform active:scale-95 flex items-center gap-2 shadow-lg ${
+                  isNight ? 'bg-red-700 hover:bg-red-600' : 'bg-blue-600 hover:bg-blue-500'
+                }`}
               >
                 {isPaused ? (
-                  <>
-                    <span>▶</span>
-                    <span>Play</span>
-                  </>
+                  <><span>▶</span><span>Play</span></>
                 ) : (
-                  <>
-                    <span>⏸</span>
-                    <span>Pause</span>
-                  </>
+                  <><span>⏸</span><span>Pause</span></>
                 )}
               </button>
             </div>
