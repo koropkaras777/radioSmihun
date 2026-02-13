@@ -88,6 +88,13 @@ function App() {
       if (title) setCurrentTitle(title);
       if (artist) setCurrentArtist(artist);
 
+      if (title && artist) {
+        const mode = radioName.includes('SMIHUN') ? 'SMIHUN' : 'SOSUN';
+        document.title = `${title} - ${artist} · Radio ${mode}`;
+      } else {
+        document.title = "Radio SMIHUN";
+      }
+
       if (!isJoined && track && serverSeek !== undefined) {
         initialServerSeekRef.current = serverSeek;
       }
