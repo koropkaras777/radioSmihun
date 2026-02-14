@@ -79,15 +79,14 @@ function App() {
   
     const mode = radioName.includes('SMIHUN') ? 'SMIHUN' : 'SOSUN';
     const timestamp = new Date().getTime();
-    
-    // Якщо є обкладинка — ставимо її, якщо ні — дефолтну мемну іконку
+
     const iconPath = currentCover 
       ? currentCover 
       : (mode === 'SMIHUN' ? '/icon-smihun-192.png' : '/icon-sosun-192.png');
   
     favicon.href = currentCover ? iconPath : `${iconPath}?v=${timestamp}`;
   }, [currentCover, radioName]);
-
+  
   useEffect(() => {
     if (!socketRef.current) return;
 
@@ -122,7 +121,9 @@ function App() {
           const data = await response.json();
           
           if (data.results && data.results.length > 0) {
-            return data.results[0].artworkUrl100;
+            const rawUrl = data.results[0].artworkUrl100;
+            return rawUrl.replace('100x100bb', '512x512bb');
+            //return data.results[0].artworkUrl100;
           }
         } catch (e) {
           console.error("Помилка пошуку обкладинки", e);
@@ -271,7 +272,7 @@ function App() {
     if (audioRef.current && socketRef.current) {
       const trackDuration = audioRef.current.duration;
       setDuration(trackDuration);
-      // Send duration to server
+
       socketRef.current.emit('trackDuration', trackDuration);
     }
   };
@@ -302,18 +303,14 @@ function App() {
         setIsArtistMarquee(artistInnerRef.current.offsetWidth > artistWrapperRef.current.offsetWidth);
       }
     };
-  
-    // ResizeObserver для відстеження динамічних змін (ресайз вікна)
+
     const obs = new ResizeObserver(() => {
-      // Використовуємо requestAnimationFrame, щоб уникнути помилки "ResizeObserver loop limit exceeded"
       window.requestAnimationFrame(checkOverflow);
     });
   
     if (titleWrapperRef.current) obs.observe(titleWrapperRef.current);
     if (artistWrapperRef.current) obs.observe(artistWrapperRef.current);
-  
-    // Примусова перевірка ПІСЛЯ монтажу та ПІСЛЯ оновлення тексту
-    // Це виправляє проблему при перезавантаженні сторінки
+
     const timeout = setTimeout(checkOverflow, 300);
   
     return () => {
