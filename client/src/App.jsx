@@ -16,16 +16,28 @@ function App() {
   const [duration, setDuration] = useState(0);
   const [radioName, setRadioName] = useState('is loading...');
   const [listeners, setListeners] = useState([]);
-  const [showOnlyOne, setShowOnlyOne] = useState(false);
-  const [isBlurred, setIsBlurred] = useState(true);
-  const [volume, setVolume] = useState(0.5);
-  const [isMuted, setIsMuted] = useState(false);
   const [showVolumeBar, setShowVolumeBar] = useState(false);
   const [currentCover, setCurrentCover] = useState(null);
   const [currentAlbum, setCurrentAlbum] = useState(null);
   const [lastTrackKey, setLastTrackKey] = useState("");
   const [isTitleMarquee, setIsTitleMarquee] = useState(false);
   const [isArtistMarquee, setIsArtistMarquee] = useState(false);
+  const [showOnlyOne, setShowOnlyOne] = useState(() => {
+    const saved = localStorage.getItem('radio_show_only_one');
+    return saved !== null ? JSON.parse(saved) : false;
+  });
+  const [isBlurred, setIsBlurred] = useState(() => {
+    const saved = localStorage.getItem('radio_is_blurred');
+    return saved !== null ? JSON.parse(saved) : true; // за замовчуванням true
+  });
+  const [volume, setVolume] = useState(() => {
+    const savedVolume = localStorage.getItem('radio_volume');
+    return savedVolume !== null ? parseFloat(savedVolume) : 0.5;
+  });
+  const [isMuted, setIsMuted] = useState(() => {
+    const savedMute = localStorage.getItem('radio_is_muted');
+    return savedMute !== null ? JSON.parse(savedMute) : false;
+  });
   
   const audioRef = useRef(null);
   const socketRef = useRef(null);
@@ -74,6 +86,22 @@ function App() {
   }, [volume, isMuted]);
 
   useEffect(() => {
+    localStorage.setItem('radio_show_only_one', JSON.stringify(showOnlyOne));
+  }, [showOnlyOne]);
+
+  useEffect(() => {
+    localStorage.setItem('radio_is_blurred', JSON.stringify(isBlurred));
+  }, [isBlurred]);
+
+  useEffect(() => {
+    localStorage.setItem('radio_volume', volume.toString());
+  }, [volume]);
+  
+  useEffect(() => {
+    localStorage.setItem('radio_is_muted', JSON.stringify(isMuted));
+  }, [isMuted]);
+
+  useEffect(() => {
     const favicon = document.getElementById('favicon');
     if (!favicon) return;
   
@@ -91,6 +119,29 @@ function App() {
     if ('mediaSession' in navigator && isJoined) {
       const mode = radioName.includes('SMIHUN') ? 'SMIHUN' : 'SOSUN';
 
+      const actionHandlers = [
+        ['play', () => {
+          if (isPaused) handlePausePlay();
+        }],
+        ['pause', () => {
+          if (!isPaused) handlePausePlay(); 
+        }],
+
+        ['stop', () => {
+          if (!isPaused) handlePausePlay();
+        }]
+      ];
+
+      for (const [action, handler] of actionHandlers) {
+        try {
+          navigator.mediaSession.setActionHandler(action, handler);
+        } catch (error) {
+          console.log(`Дія ${action} не підтримується браузером`);
+        }
+      }
+
+      navigator.mediaSession.playbackState = isPaused ? 'paused' : 'playing';
+
       navigator.mediaSession.metadata = new MediaMetadata({
         title: currentTitle || "Radio SMIHUN",
         artist: currentArtist || "Anonymous",
@@ -104,7 +155,7 @@ function App() {
         ]
       });
     }
-  }, [currentCover, currentTitle, currentArtist, isJoined]);
+  }, [isPaused, isJoined, currentTitle, currentArtist, currentCover]);
 
   useEffect(() => {
     if (!socketRef.current) return;
