@@ -24,7 +24,8 @@ function App() {
   const [currentCover, setCurrentCover] = useState(null);
   const [currentAlbum, setCurrentAlbum] = useState(null);
   const [lastTrackKey, setLastTrackKey] = useState("");
-
+  const [isTitleMarquee, setIsTitleMarquee] = useState(false);
+  const [isArtistMarquee, setIsArtistMarquee] = useState(false);
   
   const audioRef = useRef(null);
   const socketRef = useRef(null);
@@ -38,6 +39,10 @@ function App() {
   const pauseServerSeekRef = useRef(null);
   const lastServerSeekRef = useRef(0);
   const resumeTimeRef = useRef(null);
+  const titleWrapperRef = useRef(null);
+  const titleInnerRef = useRef(null);
+  const artistWrapperRef = useRef(null);
+  const artistInnerRef = useRef(null);
 
   useEffect(() => {
     if (!socketRef.current) {
@@ -93,8 +98,10 @@ function App() {
 
       if (isPreparing) {
         setRadioName("PREPARING MODE...");
-        setCurrentTitle("Please wait...");
-        setCurrentArtist("System");
+        setCurrentTitle("Anonymous");
+        setCurrentArtist("Music");
+        setCurrentAlbum("is coming");
+        setCurrentCover(null);
         return; 
       }
       
@@ -285,6 +292,35 @@ function App() {
     setIsJoined(true);
     joinTimeRef.current = Date.now();
   };
+
+  useEffect(() => {
+    const checkOverflow = () => {
+      if (titleWrapperRef.current && titleInnerRef.current) {
+        setIsTitleMarquee(titleInnerRef.current.offsetWidth > titleWrapperRef.current.offsetWidth);
+      }
+      if (artistWrapperRef.current && artistInnerRef.current) {
+        setIsArtistMarquee(artistInnerRef.current.offsetWidth > artistWrapperRef.current.offsetWidth);
+      }
+    };
+  
+    // ResizeObserver для відстеження динамічних змін (ресайз вікна)
+    const obs = new ResizeObserver(() => {
+      // Використовуємо requestAnimationFrame, щоб уникнути помилки "ResizeObserver loop limit exceeded"
+      window.requestAnimationFrame(checkOverflow);
+    });
+  
+    if (titleWrapperRef.current) obs.observe(titleWrapperRef.current);
+    if (artistWrapperRef.current) obs.observe(artistWrapperRef.current);
+  
+    // Примусова перевірка ПІСЛЯ монтажу та ПІСЛЯ оновлення тексту
+    // Це виправляє проблему при перезавантаженні сторінки
+    const timeout = setTimeout(checkOverflow, 300);
+  
+    return () => {
+      obs.disconnect();
+      clearTimeout(timeout);
+    };
+  }, [currentTitle, currentArtist, currentAlbum, isJoined]);
 
   useEffect(() => {
     if (!isJoined || !audioRef.current || !currentTrack || hasStartedPlaybackRef.current || isPaused) return;
@@ -608,29 +644,25 @@ function App() {
 
               <div className="flex-1 min-w-0 flex flex-col justify-center overflow-hidden">
                 {currentTitle && (
-                  /* Клас mask-active додається тільки якщо текст довгий */
-                  <div className={`marquee-wrapper ${currentTitle.length > 20 ? 'mask-active' : ''}`}>
-                    <div className={`text-xl md:text-3xl font-black mb-1 transition-colors ${
-                      isNight ? 'text-[#bc0000]' : 'text-blue-400'
-                    } ${currentTitle.length > 20 ? 'animate-marquee' : ''}`}>
-                      <span>{currentTitle}</span>
-                      {/* Рендеримо дублікат тільки якщо текст дійсно довгий */}
-                      {currentTitle.length > 20 && <span className="ml-12">{currentTitle}</span>}
+                  <div ref={titleWrapperRef} className={`marquee-wrapper ${isTitleMarquee ? 'mask-active' : ''}`}>
+                    <div 
+                      className={`flex w-max ${isTitleMarquee ? 'animate-marquee' : ''} ${isNight ? 'text-[#bc0000]' : 'text-blue-400'} text-xl md:text-3xl font-black mb-1 transition-colors`}
+                    >
+                      {/* Цей span ми міряємо */}
+                      <span ref={titleInnerRef}>{currentTitle}</span>
+                      {/* Цей span бачить користувач як дублікат */}
+                      {isTitleMarquee && <span className="ml-12">{currentTitle}</span>}
                     </div>
                   </div>
                 )}
 
                 {(currentArtist || currentAlbum) && (
-                  <div className={`marquee-wrapper ${
-                    (currentArtist?.length + (currentAlbum?.length || 0)) > 30 ? 'mask-active' : ''
-                  }`}>
-                    <div className={`text-sm md:text-xl text-gray-300 font-medium ${
-                      (currentArtist?.length + (currentAlbum?.length || 0)) > 30 ? 'animate-marquee' : ''
-                    }`}>
-                      <span>{currentArtist}{currentAlbum && ` · ${currentAlbum}`}</span>
-                      {(currentArtist?.length + (currentAlbum?.length || 0)) > 30 && (
-                        <span className="ml-12">{currentArtist}{currentAlbum && ` · ${currentAlbum}`}</span>
-                      )}
+                  <div ref={artistWrapperRef} className={`marquee-wrapper ${isArtistMarquee ? 'mask-active' : ''}`}>
+                    <div 
+                      className={`flex w-max text-sm md:text-xl text-gray-300 font-medium ${isArtistMarquee ? 'animate-marquee' : ''}`}
+                    >
+                      <span ref={artistInnerRef}>{currentArtist}{currentAlbum && ` · ${currentAlbum}`}</span>
+                      {isArtistMarquee && <span className="ml-12">{currentArtist}{currentAlbum && ` · ${currentAlbum}`}</span>}
                     </div>
                   </div>
                 )}
