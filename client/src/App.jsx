@@ -96,7 +96,7 @@ function App() {
   useEffect(() => {
     localStorage.setItem('radio_volume', volume.toString());
   }, [volume]);
-  
+
   useEffect(() => {
     localStorage.setItem('radio_is_muted', JSON.stringify(isMuted));
   }, [isMuted]);
@@ -527,12 +527,11 @@ function App() {
           </span>
 
           <div className="flex justify-end items-center gap-2 mb-4 pt-2 pr-1 relative">
-            {/* Відображаємо перших трьох */}
             {visibleListeners.map((user, i) => (
               <div 
               key={i} 
               className="group relative flex items-center justify-center shrink-0"
-              tabIndex="0" // Важливо для роботи фокусу на мобільних
+              tabIndex="0"
             >
               <div 
                 className="w-10 h-10 rounded-full border-2 overflow-hidden flex items-center justify-center transition-transform group-hover:scale-110 group-active:scale-95 shadow-sm"
@@ -559,7 +558,6 @@ function App() {
                 </span>
               </div>
             
-              {/* Універсальна підказка: hover для ПК, focus/active для мобільних */}
               <div className={`absolute -bottom-10 right-0 px-2 py-1 rounded-md text-[10px] font-bold whitespace-nowrap z-50 pointer-events-none 
                 opacity-0 translate-y-2 
                 group-hover:opacity-100 group-hover:translate-y-0 
@@ -576,7 +574,6 @@ function App() {
             </div>
             ))}
 
-            {/* Якщо є більше 3 користувачів, показуємо лічильник з випадаючим списком */}
             {hiddenCount > 0 && (
               <div className="group relative">
                 <div 
@@ -589,7 +586,6 @@ function App() {
                   +{hiddenCount}
                 </div>
 
-                {/* Випадаючий список при наведенні (Tooltip) */}
                 <div className={`absolute right-0 top-full mt-2 w-56 rounded-xl shadow-2xl p-3 z-50 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-300 backdrop-blur-md ${
                   isNight 
                     ? 'bg-[#1a0505]/70 border border-[#4a0404]/50' 
@@ -603,7 +599,6 @@ function App() {
                   <ul className="max-h-60 overflow-y-auto space-y-3 custom-scrollbar">
                     {hiddenListeners.map((user, i) => (
                       <li key={i} className="flex items-center gap-3 group/item">
-                        {/* Кружок з фото або літерою */}
                         <div 
                           className="w-8 h-8 rounded-full border flex items-center justify-center text-[10px] font-bold shrink-0 overflow-hidden relative"
                           style={{ 
@@ -623,7 +618,6 @@ function App() {
                             />
                           ) : null}
 
-                          {/* Заглушка, якщо фото немає або воно не завантажилось */}
                           <span 
                             className="flex items-center justify-center w-full h-full"
                             style={{ display: user.img ? 'none' : 'flex' }}
@@ -694,7 +688,6 @@ function App() {
             <h2 className="text-2xl font-semibold mb-4 text-gray-400">Now Playing</h2>
 
             <div className="flex flex-row items-center gap-4 md:gap-6 mb-6 overflow-hidden">
-              {/* Обкладинка */}
               <div className="relative shrink-0">
                 <img 
                   src={currentCover || (isNight ? '/icon-sosun-192.png' : '/icon-smihun-192.png')} 
@@ -715,9 +708,7 @@ function App() {
                     <div 
                       className={`flex w-max ${isTitleMarquee ? 'animate-marquee' : ''} ${isNight ? 'text-[#bc0000]' : 'text-blue-400'} text-xl md:text-3xl font-black mb-1 transition-colors`}
                     >
-                      {/* Цей span ми міряємо */}
                       <span ref={titleInnerRef}>{currentTitle}</span>
-                      {/* Цей span бачить користувач як дублікат */}
                       {isTitleMarquee && <span className="ml-12">{currentTitle}</span>}
                     </div>
                   </div>
