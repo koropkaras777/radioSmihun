@@ -88,6 +88,25 @@ function App() {
   }, [currentCover, radioName]);
   
   useEffect(() => {
+    if ('mediaSession' in navigator && isJoined) {
+      const mode = radioName.includes('SMIHUN') ? 'SMIHUN' : 'SOSUN';
+
+      navigator.mediaSession.metadata = new MediaMetadata({
+        title: currentTitle || "Radio SMIHUN",
+        artist: currentArtist || "Anonymous",
+        album: currentAlbum || `Radio ${mode}`,
+        artwork: [
+          { 
+            src: currentCover || (mode === 'SMIHUN' ? '/icon-smihun-192.png' : '/icon-sosun-192.png'), 
+            sizes: '512x512', 
+            type: 'image/png' 
+          }
+        ]
+      });
+    }
+  }, [currentCover, currentTitle, currentArtist, isJoined]);
+
+  useEffect(() => {
     if (!socketRef.current) return;
 
     const handleSync = (state) => {
