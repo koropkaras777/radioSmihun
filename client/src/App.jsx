@@ -799,13 +799,9 @@ function App() {
                     setVolume(v);
                     if (v > 0) setIsMuted(false);
                   }}
-                  className={`absolute inset-0 w-full h-full appearance-none bg-transparent cursor-pointer z-30 transition-colors duration-300 ${
+                  className={`absolute inset-0 w-full h-full [writing-mode:vertical-lr] [direction:rtl] bg-transparent cursor-pointer z-30 transition-colors duration-300 ${
                     radioName.includes('SMIHUN') ? 'accent-blue-500' : 'accent-red-500'
                   }`}
-                  style={{ 
-                    WebkitAppearance: 'slider-vertical', 
-                    appearance: 'slider-vertical' 
-                  }}
                 />
               </div>
             </div>

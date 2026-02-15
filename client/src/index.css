@@ -11,6 +11,11 @@ body {
   -moz-osx-font-smoothing: grayscale;
 }
 
+input[type="range"].vertical {
+  writing-mode: vertical-lr;
+  direction: rtl;
+}
+
 .marquee-wrapper {
   width: 100%;
   overflow: hidden;
