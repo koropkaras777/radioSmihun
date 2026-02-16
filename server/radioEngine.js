@@ -96,8 +96,10 @@ export class RadioEngine {
       return;
     }
 
-    if (!force && !this.currentTrackDuration && timePlayed < 600000) {
-      return;
+    const isStuck = !this.currentTrackDuration && timePlayed > 600000;
+
+    if (force || isStuck || (this.currentTrackDuration && timePlayed >= this.currentTrackDuration * 1000)) {
+      console.log(isStuck ? "[Radio] Safety trigger: switching stuck track" : "[Radio] Normal switch");
     }
 
     const desiredMode = this.getDesiredMode();

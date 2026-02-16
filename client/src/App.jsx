@@ -411,11 +411,11 @@ function App() {
     }
   };
 
-  const handleEnded = () => {
-    if (socketRef.current) {
-      socketRef.current.emit('trackEnd');
-    }
-  };
+  // const handleEnded = () => {
+  //   if (socketRef.current) {
+  //     socketRef.current.emit('trackEnd');
+  //   }
+  // };
 
   const handleJoinRadio = async () => {
     setIsJoined(true);
@@ -723,7 +723,7 @@ function App() {
           ref={audioRef}
           onLoadedMetadata={handleLoadedMetadata}
           onTimeUpdate={handleTimeUpdate}
-          onEnded={handleEnded}
+          //onEnded={handleEnded}
           preload="auto"
         />
 
