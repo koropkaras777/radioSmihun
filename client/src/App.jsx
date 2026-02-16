@@ -3,6 +3,56 @@ import { io } from 'socket.io-client';
 
 const SERVER_URL = import.meta.env.VITE_SERVER_URL || 'http://localhost:3001';
 
+const translations = {
+  ua: {
+    joinRadio: "Слухати радіо",
+    nowPlaying: "Зараз грає",
+    anonymouslisteners: "АНОНІМНІ СЛУХАЧІ",
+    otherListeners: "Інші слухачі",
+    smihunChannel: "КАНАЛ СМІХУН",
+    radioNameDay: "Радіо СМІХУН",
+    radioNameNight: "Радіо СОСУН",
+    connected: "Підключено",
+    disconnected: "Відключено",
+    preparingMode: "Підготовка...",
+    nowPlaying: "Зараз грає",
+    currentTitle: "Анонім",
+    currentArtist: "Музика",
+    currentAlbum: "вже близько",
+    pause: "Пауза",
+    play: "Грати",
+    upcomingSongs: "Наступні пісні",
+    onlyOne: "Лише одна",
+    showTitles: "Показати назву",
+    hideTitles: "Сховати назву",
+    unknownArtist: "Невідомий виконавець",
+    waitingMusic: "Очікуємо музику..."
+  },
+  en: {
+    joinRadio: "Join Radio",
+    anonymouslisteners: "Anonymous listeners",
+    otherListeners: "Other listeners",
+    smihunChannel: "Сміхун Channel",
+    radioNameDay: "Radio SMIHUN",
+    radioNameNight: "Radio SOSUN",
+    connected: "Connected",
+    disconnected: "Disconnected",
+    preparingMode: "Preparing mode...",
+    nowPlaying: "Now Playing",
+    currentTitle: "Anonymous",
+    currentArtist: "Music",
+    currentAlbum: "is coming",
+    pause: "Pause",
+    play: "Play",
+    upcomingSongs: "Upcoming Songs",
+    onlyOne: "Only one",
+    showTitles: "Show titles",
+    hideTitles: "Hide titles",
+    unknownArtist: "Unknown Artist",
+    waitingMusic: "Waiting for music to start..."
+  }
+};
+
 function App() {
   const [isConnected, setIsConnected] = useState(false);
   const [isJoined, setIsJoined] = useState(false);
@@ -28,7 +78,7 @@ function App() {
   });
   const [isBlurred, setIsBlurred] = useState(() => {
     const saved = localStorage.getItem('radio_is_blurred');
-    return saved !== null ? JSON.parse(saved) : true; // за замовчуванням true
+    return saved !== null ? JSON.parse(saved) : true;
   });
   const [volume, setVolume] = useState(() => {
     const savedVolume = localStorage.getItem('radio_volume');
@@ -37,6 +87,9 @@ function App() {
   const [isMuted, setIsMuted] = useState(() => {
     const savedMute = localStorage.getItem('radio_is_muted');
     return savedMute !== null ? JSON.parse(savedMute) : false;
+  });
+  const [lang, setLang] = useState(() => {
+    return localStorage.getItem('radio_lang') || 'ua';
   });
   
   const audioRef = useRef(null);
@@ -55,6 +108,8 @@ function App() {
   const titleInnerRef = useRef(null);
   const artistWrapperRef = useRef(null);
   const artistInnerRef = useRef(null);
+
+  const t = translations[lang];
 
   useEffect(() => {
     if (!socketRef.current) {
@@ -78,6 +133,10 @@ function App() {
       }
     };
   }, []);
+
+  useEffect(() => {
+    localStorage.setItem('radio_lang', lang);
+  }, [lang]);
 
   useEffect(() => {
     if (audioRef.current) {
@@ -136,7 +195,7 @@ function App() {
         try {
           navigator.mediaSession.setActionHandler(action, handler);
         } catch (error) {
-          console.log(`Дія ${action} не підтримується браузером`);
+          console.log(`The ${action} is not supported by the browser`);
         }
       }
 
@@ -166,10 +225,10 @@ function App() {
       const { track, title, artist, album, seek: serverSeek, isPlaying: serverIsPlaying, playlist: upcoming, mode, isPreparing } = state;
 
       if (isPreparing) {
-        setRadioName("PREPARING MODE...");
-        setCurrentTitle("Anonymous");
-        setCurrentArtist("Music");
-        setCurrentAlbum("is coming");
+        setRadioName(t.preparingMode);
+        setCurrentTitle(t.currentTitle);
+        setCurrentArtist(t.currentArtist);
+        setCurrentAlbum(t.currentAlbum);
         setCurrentCover(null);
         return; 
       }
@@ -196,7 +255,7 @@ function App() {
             //return data.results[0].artworkUrl100;
           }
         } catch (e) {
-          console.error("Помилка пошуку обкладинки", e);
+          console.error("Cover search error", e);
         }
         return null;
       };
@@ -230,7 +289,7 @@ function App() {
 
       if (track && track !== currentTrack) {
         setCurrentTrack(track);
-        hasInitialSyncedRef.current = false; // Reset for new track
+        hasInitialSyncedRef.current = false;
         const audioUrl = `${SERVER_URL}/music/${encodeURIComponent(track)}`;
         if (audioRef.current.src !== audioUrl) {
           audioRef.current.src = audioUrl;
@@ -496,7 +555,7 @@ function App() {
           <span className={`text-[10px] uppercase tracking-widest font-bold mb-2 ${
             isNight ? 'text-gray-500' : 'text-gray-500' //night text-red-900/60
           }`}>
-            Сміхун Channel
+            {t.smihunChannel}
           </span>
           <a 
             href="https://t.me/+RzdT3M2lQA4hFMA3" 
@@ -523,7 +582,7 @@ function App() {
           <span className={`text-[9px] uppercase tracking-[0.2em] font-black  px-1 ${
             isNight ? 'text-red-900/60' : 'text-gray-500'
           }`}>
-            Anonymous listeners
+            {t.anonymouslisteners}
           </span>
 
           <div className="flex justify-end items-center gap-2 mb-4 pt-2 pr-1 relative">
@@ -553,7 +612,7 @@ function App() {
                   />
                 ) : null}
                 <span className="flex items-center justify-center w-full h-full text-[10px] font-bold"
-                      style={{ display: user.img ? 'none' : 'flex' }}>
+                    style={{ display: user.img ? 'none' : 'flex' }}>
                   {user.name.split(' ')[1]?.[0] || user.name[0]}
                 </span>
               </div>
@@ -594,7 +653,7 @@ function App() {
                   <p className={`text-[10px] uppercase tracking-wider font-black mb-3 pb-1 border-b ${
                     isNight ? 'text-red-900 border-red-900/30' : 'text-gray-800 border-gray-100'
                   }`}>
-                    Other listeners
+                    {t.otherListeners}
                   </p>
                   <ul className="max-h-60 overflow-y-auto space-y-3 custom-scrollbar">
                     {hiddenListeners.map((user, i) => (
@@ -643,20 +702,20 @@ function App() {
 
       <div className="container mx-auto px-4 py-8 max-w-4xl">
         <h1 
-          className={`text-5xl font-extrabold mb-8 text-center transition-all duration-1000 tracking-wider`}
+          className={`text-[46px] font-extrabold mb-8 text-center transition-all duration-1000 tracking-wider`}
           style={{
             color: isNight ? '#bc0000' : '#ffffff', 
             WebkitTextStroke: isNight ? '1px #4a0404' : 'none', 
             textShadow: isNight ? '0 0 15px rgba(188, 0, 0, 0.3)' : 'none', 
             fontFamily: "'Segoe UI', Roboto, sans-serif"
           }}
-        >{radioName}</h1>
+        >{radioName == t.preparingMode ? t.preparingMode : (isNight? t.radioNameNight : t.radioNameDay)}</h1>
 
         <div className="mb-6 text-center">
           <span className={`inline-block px-4 py-2 rounded-full text-sm ${
             isConnected ? 'bg-green-600' : 'bg-red-600'
           }`}>
-            {isConnected ? 'Connected' : 'Disconnected'}
+            {isConnected ? t.connected : t.disconnected}
           </span>
         </div>
 
@@ -678,14 +737,14 @@ function App() {
                   : 'bg-blue-600 hover:bg-blue-700'
               }`}
             >
-              Join Radio
+              {t.joinRadio}
             </button>
           </div>
         )}
 
         {isJoined && currentTrack && (
           <div className="bg-gray-800 rounded-lg p-6 mb-6">
-            <h2 className="text-2xl font-semibold mb-4 text-gray-400">Now Playing</h2>
+            <h2 className="text-2xl font-semibold mb-4 text-gray-400">{t.nowPlaying}</h2>
 
             <div className="flex flex-row items-center gap-4 md:gap-6 mb-6 overflow-hidden">
               <div className="relative shrink-0">
@@ -751,9 +810,9 @@ function App() {
                 }`}
               >
                 {isPaused ? (
-                  <><span>▶</span><span>Play</span></>
+                  <><span>▶</span><span>{t.play}</span></>
                 ) : (
-                  <><span>⏸</span><span>Pause</span></>
+                  <><span>⏸</span><span>{t.pause}</span></>
                 )}
               </button>
             </div>
@@ -811,7 +870,7 @@ function App() {
         {isJoined && playlist.length > 0 && (
           <div className="bg-gray-800 rounded-lg p-6 mt-6">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-2xl font-semibold text-gray-400">Upcoming Songs</h2>
+              <h2 className="text-2xl font-semibold text-gray-400">{t.upcomingSongs}</h2>
               
               <div className="flex items-center gap-4">
                 <label className="flex items-center gap-2 cursor-pointer text-sm text-gray-400 hover:text-white transition-colors">
@@ -823,7 +882,7 @@ function App() {
                       showOnlyOne ? (radioName.includes('SMIHUN') ? 'text-blue-500' : 'text-red-500') : ''
                     }`}
                   />
-                  Only one
+                  {t.onlyOne}
                 </label>
 
                 <button 
@@ -835,7 +894,7 @@ function App() {
                           : 'bg-red-900/40 text-red-500 border border-red-500/30')
                       : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
                   }`}
-                  title={isBlurred ? "Show titles" : "Hide titles"}
+                  title={isBlurred ? t.showTitles : t.hideTitles}
                 >
                   <span className="text-lg leading-none flex items-center justify-center">
                     {isBlurred ? '👁️‍🗨️' : '👁️'}
@@ -858,7 +917,7 @@ function App() {
                     <span className="text-gray-500 font-mono text-xs">#{index + 1}</span>
                     <div>
                       <span className="font-semibold block leading-tight">{track.title || track.filename}</span>
-                      <span className="text-gray-400 text-xs">{track.artist || 'Unknown Artist'}</span>
+                      <span className="text-gray-400 text-xs">{track.artist || t.unknownArtist}</span>
                     </div>
                   </div>
                 </li>
@@ -869,9 +928,31 @@ function App() {
 
         {isJoined && !currentTrack && (
           <div className="bg-gray-800 rounded-lg p-6 text-center">
-            <p className="text-gray-400">Waiting for music to start...</p>
+            <p className="text-gray-400">{t.waitingMusic}</p>
           </div>
         )}
+      </div>
+      <div className="fixed bottom-6 right-6 z-50 flex items-center bg-gray-800/60 backdrop-blur-md p-1 rounded-full border border-white/10 shadow-lg">
+        <button
+          onClick={() => setLang('ua')}
+          className={`px-3 py-1.5 rounded-full text-xs font-black transition-all duration-300 ${
+            lang === 'ua' 
+              ? ( isNight ? 'bg-red-700 text-white shadow-md' : 'bg-blue-600 text-white shadow-md')
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          UA
+        </button>
+        <button
+          onClick={() => setLang('en')}
+          className={`px-3 py-1.5 rounded-full text-xs font-black transition-all duration-300 ${
+            lang === 'en' 
+              ? ( isNight ? 'bg-red-700 text-white shadow-md' : 'bg-blue-600 text-white shadow-md')
+              : 'text-gray-400 hover:text-white'
+          }`}
+        >
+          EN
+        </button>
       </div>
     </div>
   );
