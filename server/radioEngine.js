@@ -92,8 +92,11 @@ export class RadioEngine {
     const now = Date.now();
     const timePlayed = this.startTime ? now - this.startTime : 0;
 
-    if (!force && timePlayed < this.minTrackPlayTime && this.currentTrack) {
-      console.log(`[Radio] Prevented premature track skip. Played only ${timePlayed}ms`);
+    if (!force && this.currentTrack && timePlayed < this.minTrackPlayTime) {
+      return;
+    }
+
+    if (!force && !this.currentTrackDuration && timePlayed < 600000) {
       return;
     }
 
@@ -178,7 +181,10 @@ export class RadioEngine {
     }
 
     if (this.isPlaying && this.currentTrack && this.currentTrackDuration) {
-      if (this.getSeek() >= this.currentTrackDuration - 0.1) {
+      const currentSeek = this.getSeek();
+
+      if (currentSeek >= this.currentTrackDuration - 0.5 && currentSeek > 5) {
+        console.log(`[Radio] Track reached end: ${currentSeek}/${this.currentTrackDuration}`);
         this.nextTrack();
       }
     }

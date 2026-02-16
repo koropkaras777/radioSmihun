@@ -15,7 +15,6 @@ const translations = {
     connected: "Підключено",
     disconnected: "Відключено",
     preparingMode: "Підготовка...",
-    nowPlaying: "Зараз грає",
     currentTitle: "Анонім",
     currentArtist: "Музика",
     currentAlbum: "вже близько",
@@ -545,6 +544,7 @@ function App() {
   const hiddenCount = hiddenListeners.length;
 
   const isNight = radioName === 'Radio SOSUN';
+  const isRainbowActive = currentArtist?.toLowerCase().includes('rainbow');
 
   return (
     <div className={`min-h-screen transition-colors duration-1000 ${
@@ -700,9 +700,9 @@ function App() {
         </div>
       </div>
 
-      <div className="container mx-auto px-4 py-8 max-w-4xl">
+      <div className="relative container z-10 mx-auto px-4 py-8 max-w-4xl">
         <h1 
-          className={`text-[46px] font-extrabold mb-8 text-center transition-all duration-1000 tracking-wider`}
+          className={`text-[44px] font-extrabold mb-8 text-center transition-all duration-1000 tracking-wider`}
           style={{
             color: isNight ? '#bc0000' : '#ffffff', 
             WebkitTextStroke: isNight ? '1px #4a0404' : 'none', 
@@ -743,7 +743,48 @@ function App() {
         )}
 
         {isJoined && currentTrack && (
-          <div className="bg-gray-800 rounded-lg p-6 mb-6">
+          <div className="relative bg-gray-800 rounded-lg p-6 mb-6">
+            <div className={`absolute left-0 right-0 top-[] w-full aspect-[2/1] z-[-1] pointer-events-none -translate-y-full transition-opacity duration-1000 ${
+              isRainbowActive ? 'opacity-100' : 'opacity-0'
+            }`}>
+              <svg 
+                viewBox="0 0 100 50" 
+                className="w-full h-full"
+                style={{ display: 'block' }}
+              >
+                {[
+                  { r: 48, color: "#c30b00" },
+                  { r: 44, color: "#f1b03c" },
+                  { r: 40, color: "#5a7331" },
+                  { r: 36, color: "#130366" },
+                  { r: 32, color: "#491c5f" }
+                ].map((circle, i) => {
+                  const circumference = Math.PI * circle.r;
+                  const progress = duration > 0 ? (seek / duration) : 0;
+                  const dashOffset = circumference * (1 - progress);
+
+                  return (
+                    <circle
+                      key={i}
+                      cx="50"
+                      cy="50"
+                      r={circle.r}
+                      fill="none"
+                      stroke={circle.color}
+                      strokeWidth="4"
+                      strokeDasharray={circumference}
+                      style={{ 
+                        strokeDashoffset: isRainbowActive ? dashOffset : circumference,
+                        transition: 'stroke-dashoffset 0.5s linear' 
+                      }}
+                      strokeLinecap="round"
+                      transform="rotate(-180 50 50)"
+                    />
+                  );
+                })}
+              </svg>
+            </div>
+
             <h2 className="text-2xl font-semibold mb-4 text-gray-400">{t.nowPlaying}</h2>
 
             <div className="flex flex-row items-center gap-4 md:gap-6 mb-6 overflow-hidden">
