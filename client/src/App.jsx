@@ -544,7 +544,54 @@ function App() {
   const hiddenCount = hiddenListeners.length;
 
   const isNight = radioName === 'Radio SOSUN';
+
   const isRainbowActive = currentArtist?.toLowerCase().includes('rainbow');
+
+  const isBibleBlack = currentTitle?.toLowerCase().includes('bible black');
+  const isSabbathFamily = currentArtist?.toLowerCase().includes('black sabbath') || 
+                          currentArtist?.toLowerCase().includes('heaven & hell');
+
+  const henryProgress = (duration && seek) ? (seek / duration) * 100 : 0;
+
+  let henryOpacity = 0;
+  let henryTop = '100%';
+  let henryFilter = 'sepia(0.2) brightness(1.2)';
+  let henryShadow = 'none';
+
+  if (isSabbathFamily && duration > 0) {
+    if (henryProgress <= 33.3) {
+        const phaseProgress = henryProgress / 33.3;
+        henryOpacity = phaseProgress * 0.5;
+        henryTop = `${100 - (phaseProgress * 50)}%`;
+    } else if (henryProgress > 33.3 && henryProgress <= 66.6) {
+        henryOpacity = 0.5;
+        henryTop = '50%';
+    } else {
+        const phaseProgress = Math.min((henryProgress - 66.6) / 33.4, 1);
+        henryOpacity = 0.5 * (1 - phaseProgress);
+        henryTop = '50%';
+    }
+
+    if (isBibleBlack) {
+      const startTime = 312; // 312
+      const endTime = 323;   // 323
+
+      if (seek >= startTime - 1 && seek <= endTime) {
+          const fadeProgress = Math.min(seek - (startTime - 1), 1); 
+          henryOpacity = 0.5 + (fadeProgress * 0.5);
+          henryFilter = `brightness(${1 - fadeProgress})`;
+          henryShadow = `drop-shadow(0 0 ${15 * fadeProgress}px rgba(255, 69, 0, 0.9))  drop-shadow(0 0 5px rgba(255, 140, 0, 1))`;
+          henryTop = '50%';
+      } 
+      else if (seek > endTime) {
+          const postEffectProgress = Math.min((seek - endTime) / (duration - endTime), 1);
+          henryOpacity = 1 - postEffectProgress;
+          henryFilter = 'brightness(0)';
+          henryShadow = `drop-shadow(0 0 ${15 * (1 - postEffectProgress)}px rgba(255, 69, 0, 0.5))`;
+          henryTop = '50%';
+      }
+    }
+  }
 
   return (
     <div className={`min-h-screen transition-colors duration-1000 ${
@@ -701,15 +748,38 @@ function App() {
       </div>
 
       <div className="relative container z-10 mx-auto px-4 py-8 max-w-4xl">
-        <h1 
-          className={`text-[44px] font-extrabold mb-8 text-center transition-all duration-1000 tracking-wider`}
-          style={{
-            color: isNight ? '#bc0000' : '#ffffff', 
-            WebkitTextStroke: isNight ? '1px #4a0404' : 'none', 
-            textShadow: isNight ? '0 0 15px rgba(188, 0, 0, 0.3)' : 'none', 
-            fontFamily: "'Segoe UI', Roboto, sans-serif"
-          }}
-        >{radioName == t.preparingMode ? t.preparingMode : (isNight? t.radioNameNight : t.radioNameDay)}</h1>
+        <div className="title-container" style={{ position: 'relative', textAlign: 'center' }}>
+          {isSabbathFamily && (
+            <img 
+              src="/svg/henry.svg" 
+              alt="Sabbath Symbol"
+              style={{
+                position: 'absolute',
+                left: '50%',
+                top: henryTop,
+                transform: 'translate(-50%, -50%)',
+                width: '180px',
+                opacity: henryOpacity,
+                filter: isBibleBlack ? `${henryFilter} ${henryShadow}` : 'sepia(0.2) brightness(1.2)',
+                zIndex: 0,
+                pointerEvents: 'none',
+                transition: 'filter 1s linear, opacity 1s linear'
+              }}
+            />
+          )}
+
+          <h1 
+            className={`text-[44px] font-extrabold mb-8 text-center transition-all duration-1000 tracking-wider`}
+            style={{
+              position: 'relative',
+              color: isNight ? '#bc0000' : '#ffffff', 
+              WebkitTextStroke: isNight ? '1px #4a0404' : 'none', 
+              textShadow: isNight ? '0 0 15px rgba(188, 0, 0, 0.3)' : 'none', 
+              fontFamily: "'Segoe UI', Roboto, sans-serif",
+              zIndex: 10,
+            }}
+          >{radioName == t.preparingMode ? t.preparingMode : (isNight? t.radioNameNight : t.radioNameDay)}</h1>
+        </div>
 
         <div className="mb-6 text-center">
           <span className={`inline-block px-4 py-2 rounded-full text-sm ${
