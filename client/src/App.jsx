@@ -531,6 +531,12 @@ function App() {
     }
   };
 
+  const handleVolumeClick = (e) => {
+    e.stopPropagation(); 
+    
+    setShowVolumeBar(!showVolumeBar);
+  };
+
   const formatTime = (seconds) => {
     if (!isFinite(seconds) || isNaN(seconds)) return '0:00';
     const mins = Math.floor(seconds / 60);
@@ -933,11 +939,13 @@ function App() {
         {isJoined && (
           <div 
             className="fixed bottom-6 left-6 z-50 flex flex-col-reverse items-center group"
-            onMouseEnter={() => setShowVolumeBar(true)}
+            onPointerEnter={(e) => e.pointerType === 'mouse' && setShowVolumeBar(true)}
+            onPointerLeave={(e) => e.pointerType === 'mouse' && setShowVolumeBar(false)}
             onMouseLeave={() => setShowVolumeBar(false)}
           >
             <button
               onClick={() => setIsMuted(!isMuted)}
+              onPointerDown={handleVolumeClick}
               className={`relative z-20 w-14 h-14 flex items-center justify-center rounded-full shadow-2xl transition-all duration-300 active:scale-95 ${
                 radioName.includes('SMIHUN') 
                   ? 'bg-blue-600 hover:bg-blue-500 shadow-blue-900/40' 
