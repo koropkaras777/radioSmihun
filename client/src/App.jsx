@@ -71,6 +71,8 @@ function App() {
   const [lastTrackKey, setLastTrackKey] = useState("");
   const [isTitleMarquee, setIsTitleMarquee] = useState(false);
   const [isArtistMarquee, setIsArtistMarquee] = useState(false);
+  const [isHammerSmashed, setIsHammerSmashed] = useState(false);
+  const [hammerVisibleSince, setHammerVisibleSince] = useState(null);
   const [showOnlyOne, setShowOnlyOne] = useState(() => {
     const saved = localStorage.getItem('radio_show_only_one');
     return saved !== null ? JSON.parse(saved) : false;
@@ -553,6 +555,30 @@ function App() {
 
   const isRainbowActive = currentArtist?.toLowerCase().includes('rainbow');
 
+  const isHammerTrack = currentArtist?.toLowerCase().includes('hammerfall');
+
+  useEffect(() => {
+    if (isHammerTrack) {
+      if (seek > 0.5 && !hammerVisibleSince) {
+        setHammerVisibleSince(Date.now());
+      }
+
+      if (hammerVisibleSince) {
+        const elapsed = Date.now() - hammerVisibleSince;
+        
+        if (elapsed >= 900) {
+          setIsHammerSmashed(true);
+        } else {
+          const timer = setTimeout(() => setIsHammerSmashed(true), 1000 - elapsed);
+          return () => clearTimeout(timer);
+        }
+      }
+    } else {
+      setIsHammerSmashed(false);
+      setHammerVisibleSince(null);
+    }
+  }, [seek, isHammerTrack, hammerVisibleSince]);
+
   const isBibleBlack = currentTitle?.toLowerCase().includes('bible black');
   const isSabbathFamily = currentArtist?.toLowerCase().includes('black sabbath') || 
                           currentArtist?.toLowerCase().includes('heaven & hell');
@@ -775,7 +801,7 @@ function App() {
           )}
 
           <h1 
-            className={`text-[44px] font-extrabold mb-8 text-center transition-all duration-1000 tracking-wider`}
+            className={`text-[44px] font-extrabold mb-8 text-center transition-all duration-600 tracking-wider`}
             style={{
               position: 'relative',
               color: isNight ? '#bc0000' : '#ffffff', 
@@ -787,12 +813,50 @@ function App() {
           >{radioName == t.preparingMode ? t.preparingMode : (isNight? t.radioNameNight : t.radioNameDay)}</h1>
         </div>
 
-        <div className="mb-6 text-center">
-          <span className={`inline-block px-4 py-2 rounded-full text-sm ${
-            isConnected ? 'bg-green-600' : 'bg-red-600'
-          }`}>
-            {isConnected ? t.connected : t.disconnected}
-          </span>
+        <div className="mb-6 text-center relative flex justify-center items-center">
+          {isHammerTrack && (
+            <img 
+              src="/svg/hammer.svg"
+              alt="Hammer"
+              fill="rgba(68, 68, 68, 0.9)"
+              className={`absolute z-0 w-[160px] h-[160px] pointer-events-none ease-in transition-all duration-1000 ${
+                seek > 1.2 
+                  ? 'opacity-100 translate-y-[-120px] translate-x-[-75px] rotate-[210deg]' 
+                  : 'opacity-0 translate-y-[-120px] translate-x-[-75px] rotate-[360deg]'
+              }`}
+              style={{ 
+                filter: `
+                  drop-shadow(0 0 20px rgba(255, 215, 0, 0.9)) 
+                  drop-shadow(0 0 28px rgba(255, 69, 0, 0.7))
+                `,
+                left: 'calc(50% + 40px)',
+                top: '-10px',
+                opacity: seek > 1.2 ? 1 : 0
+              }}
+            />
+          )}
+
+          <div className="relative inline-flex items-center justify-center rounded-full overflow-hidden px-4 py-2 min-w-[120px] z-[-20]">
+            <div className={`absolute inset-0 transition-colors duration-300 ${
+              isConnected ? 'bg-green-600' : 'bg-red-600'
+            }`} />
+
+            {isHammerSmashed && (
+              <div 
+                className="absolute inset-0 pointer-events-none opacity-90 mix-blend-multiply"
+                style={{
+                  backgroundImage: "url('/img/cracks.png')",
+                  backgroundSize: 'cover',
+                  filter: 'brightness(0.3) contrast(1.5)',
+                  zIndex: 1
+                }}
+              />
+            )}
+
+            <span className="relative z-10 text-sm font-black text-white pointer-events-none">
+              {isConnected ? t.connected : t.disconnected}
+            </span>
+          </div>
         </div>
 
         <audio
